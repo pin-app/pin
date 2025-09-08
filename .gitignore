@@ -17,6 +17,7 @@
 .DS_Store?
 ._*
 node_modules/
+pg_data/
 jspm_packages/
 *.tsbuildinfo
 .npm

@@ -8,6 +8,7 @@ import (
 
 	"github.com/pin-app/pin/internal/handlers"
 	"github.com/pin-app/pin/internal/server"
+	"github.com/pin-app/pin/migrations"
 )
 
 func main() {
@@ -22,6 +23,16 @@ func main() {
 			"error", err,
 		)
 		os.Exit(1)
+	}
+
+	// auto-run migrations if url provided
+	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
+		slog.Info("running database migrations")
+		if err := migrations.Run(dbURL); err != nil {
+			slog.Error("database migration failed", "error", err)
+			os.Exit(1)
+		}
+		slog.Info("database migrations complete")
 	}
 
 	srv := server.New()

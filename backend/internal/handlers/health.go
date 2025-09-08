@@ -15,10 +15,8 @@ type HealthResponse struct {
 }
 
 func HealthCheck(w http.ResponseWriter, r *http.Request) {
-	// Get logger from context
 	logger, ok := r.Context().Value("logger").(*slog.Logger)
 	if !ok {
-		// Fallback to default logger if not found
 		logger = slog.Default()
 	}
 

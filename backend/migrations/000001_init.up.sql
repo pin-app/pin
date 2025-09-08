@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS app_bootstrap (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

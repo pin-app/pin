@@ -28,3 +28,34 @@ Frontend:
 cd mobile
 npm start
 ```
+
+### Database (Postgres via Docker)
+
+Prereqs: Docker Desktop
+
+Start Postgres:
+```bash
+docker compose up -d db
+```
+
+Run migrations (uses `migrate/migrate` container):
+```bash
+cd backend
+make migrate-up
+```
+
+Create a new migration:
+```bash
+cd backend
+make migrate-create name=add_users_table
+```
+
+Environment variables (defaults shown):
+```bash
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=pin
+DB_HOST=localhost
+DB_PORT=5432
+DATABASE_URL=postgres://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME?sslmode=disable
+```

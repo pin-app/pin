@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/pin-app/pin/internal/handlers"
 	"github.com/pin-app/pin/internal/server"
@@ -13,6 +14,14 @@ func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
+	}
+
+	if p, err := strconv.Atoi(port); err != nil || p <= 0 || p > 65535 {
+		slog.Error("invalid PORT environment variable; must be 1-65535",
+			"PORT", port,
+			"error", err,
+		)
+		os.Exit(1)
 	}
 
 	srv := server.New()

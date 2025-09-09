@@ -1,11 +1,11 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors, typography } from '../theme';
-import { FeedPage, MapPage, ProfilePage } from '../pages';
+import { HomeScreen, MapScreen, ProfileScreen } from '../screens';
 
 const Tab = createBottomTabNavigator();
 
-export default function BottomTabNavigator() {
+export default function TabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
@@ -33,22 +33,22 @@ export default function BottomTabNavigator() {
       }}
     >
       <Tab.Screen 
-        name="Feed" 
-        component={FeedPage}
+        name="Home" 
+        component={HomeScreen}
         options={{
           title: 'Feed',
         }}
       />
       <Tab.Screen 
         name="Map" 
-        component={MapPage}
+        component={MapScreen}
         options={{
           title: 'Map',
         }}
       />
       <Tab.Screen 
         name="Profile" 
-        component={ProfilePage}
+        component={ProfileScreen}
         options={{
           title: 'Profile',
         }}

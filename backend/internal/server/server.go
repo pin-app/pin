@@ -168,10 +168,9 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.ResponseWriter.WriteHeader(code)
 }
 
-// StoreHealthCheck stores a health check call in the database
 func (s *Server) StoreHealthCheck(remoteAddr, userAgent string) error {
 	if s.db == nil {
-		return nil // No database connection, skip storage
+		return nil
 	}
 
 	_, err := s.db.Exec(
@@ -181,10 +180,9 @@ func (s *Server) StoreHealthCheck(remoteAddr, userAgent string) error {
 	return err
 }
 
-// GetHealthCheckCount returns the total number of health checks stored
 func (s *Server) GetHealthCheckCount() (int, error) {
 	if s.db == nil {
-		return 0, nil // No database connection, return 0
+		return 0, nil
 	}
 
 	var count int

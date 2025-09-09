@@ -1,11 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
 
+	_ "github.com/lib/pq"
 	"github.com/pin-app/pin/internal/handlers"
 	"github.com/pin-app/pin/internal/server"
 	"github.com/pin-app/pin/migrations"
@@ -25,7 +27,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// auto-run migrations if url provided
+	var db *sql.DB
 	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
 		slog.Info("running database migrations")
 		if err := migrations.Run(dbURL); err != nil {
@@ -33,9 +35,22 @@ func main() {
 			os.Exit(1)
 		}
 		slog.Info("database migrations complete")
+
+		var err error
+		db, err = sql.Open("postgres", dbURL)
+		if err != nil {
+			slog.Error("failed to open database connection", "error", err)
+			os.Exit(1)
+		}
+		defer db.Close()
 	}
 
-	srv := server.New()
+	var srv *server.Server
+	if db != nil {
+		srv = server.NewWithDB(db)
+	} else {
+		srv = server.New()
+	}
 
 	handlers.RegisterRoutes(srv)
 

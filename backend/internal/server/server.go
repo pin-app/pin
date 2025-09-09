@@ -2,16 +2,20 @@ package server
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 type Server struct {
 	router *Router
 	logger *slog.Logger
+	db     *sql.DB
 }
 
 type Router struct {
@@ -31,6 +35,25 @@ func New() *Server {
 	s := &Server{
 		router: router,
 		logger: logger,
+	}
+
+	return s
+}
+
+func NewWithDB(db *sql.DB) *Server {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level:     slog.LevelInfo,
+		AddSource: true,
+	}))
+
+	router := &Router{
+		routes: make(map[string]map[string]http.HandlerFunc),
+	}
+
+	s := &Server{
+		router: router,
+		logger: logger,
+		db:     db,
 	}
 
 	return s
@@ -143,4 +166,28 @@ type responseWriter struct {
 func (rw *responseWriter) WriteHeader(code int) {
 	rw.statusCode = code
 	rw.ResponseWriter.WriteHeader(code)
+}
+
+// StoreHealthCheck stores a health check call in the database
+func (s *Server) StoreHealthCheck(remoteAddr, userAgent string) error {
+	if s.db == nil {
+		return nil // No database connection, skip storage
+	}
+
+	_, err := s.db.Exec(
+		"INSERT INTO health_checks (remote_addr, user_agent) VALUES ($1, $2)",
+		remoteAddr, userAgent,
+	)
+	return err
+}
+
+// GetHealthCheckCount returns the total number of health checks stored
+func (s *Server) GetHealthCheckCount() (int, error) {
+	if s.db == nil {
+		return 0, nil // No database connection, return 0
+	}
+
+	var count int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM health_checks").Scan(&count)
+	return count, err
 }

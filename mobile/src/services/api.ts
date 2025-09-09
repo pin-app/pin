@@ -4,6 +4,7 @@ export interface HealthResponse {
   status: string;
   timestamp: string;
   service: string;
+  count: number;
 }
 
 export interface ApiError {

@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS app_bootstrap;
+DROP TABLE IF EXISTS health_checks;

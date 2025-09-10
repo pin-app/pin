@@ -1,4 +1,7 @@
-const API_BASE_URL = 'http://localhost:8080';
+// TODO: __DEV__ is never used, should add a real dev mode
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE ??
+  (__DEV__ ? "http://localhost:8080" : "https://api.yourprod.com");
 
 export interface HealthResponse {
   status: string;

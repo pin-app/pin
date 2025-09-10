@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "start": "expo start",
+
+    "start:mac": "EXPO_PUBLIC_API_BASE=http://$(ipconfig getifaddr en0):8080 expo start",
+    "start:linux": "EXPO_PUBLIC_API_BASE=http://$(hostname -I | awk '{print $1}'):8080 expo start",
+    "start:win": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$ip=(Get-NetIPAddress -AddressFamily IPv4 | ?{ $_.IPAddress -notlike '169.*' -and $_.InterfaceAlias -notmatch 'vEthernet|Loopback' } | select -First 1 -Expand IPAddress); $env:EXPO_PUBLIC_API_BASE=\\\"http://$ip:8080\\\"; npx expo start\"",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web"

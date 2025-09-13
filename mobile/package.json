@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-
     "start:mac": "EXPO_PUBLIC_API_BASE=http://$(ipconfig getifaddr en0):8080 expo start",
     "start:linux": "EXPO_PUBLIC_API_BASE=http://$(hostname -I | awk '{print $1}'):8080 expo start",
     "start:win": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$ip=(Get-NetIPAddress -AddressFamily IPv4 | ?{ $_.IPAddress -notlike '169.*' -and $_.InterfaceAlias -notmatch 'vEthernet|Loopback' } | select -First 1 -Expand IPAddress); $env:EXPO_PUBLIC_API_BASE=\\\"http://$ip:8080\\\"; npx expo start\"",
@@ -18,7 +17,9 @@
     "expo-status-bar": "~2.2.3",
     "react": "19.0.0",
     "react-native": "0.79.6",
-    "react-native-safe-area-context": "^5.6.1"
+    "react-native-safe-area-context": "^5.6.1",
+    "@expo/vector-icons": "^15.0.2",
+    "expo-asset": "~11.1.7"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

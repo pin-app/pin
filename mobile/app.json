@@ -12,6 +12,9 @@
     "android": {
       "edgeToEdgeEnabled": true
     },
-    "web": {}
+    "web": {},
+    "plugins": [
+      "expo-asset"
+    ]
   }
 }

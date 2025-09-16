@@ -1,6 +1,7 @@
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import { useRef, useState } from "react";
 import {
+  Keyboard,
   Pressable,
   StyleProp,
   StyleSheet,
@@ -10,6 +11,7 @@ import {
 } from "react-native";
 import { colors } from "../../theme/colors";
 import { typography } from "../../theme/typography";
+import OutsidePressHandler from "react-native-outside-press";
 
 interface SearchBarProps {
   placeholder: string;
@@ -31,30 +33,32 @@ export default function SearchBar({
   const [isInputFocused, setIsInputFocused] = useState(false);
 
   return (
-    <View
-      style={[
-        styles.container,
-        isInputFocused && styles.containerFocused,
-        style,
-      ]}
-    >
-      <FontAwesome6 name="magnifying-glass" size={12} color="black" />
-      <TextInput
-        placeholder={placeholder}
-        value={value}
-        onChangeText={onInputChange}
-        style={styles.textInput}
-        onFocus={() => setIsInputFocused(true)}
-        onBlur={() => setIsInputFocused(false)}
-        onSubmitEditing={onSearchPress}
-        returnKeyType="search"
-      />
-      {!!value && (
-        <Pressable onPress={onClear}>
-          <FontAwesome6 name="xmark" size={12} color="black" />
-        </Pressable>
-      )}
-    </View>
+    <OutsidePressHandler onOutsidePress={() => Keyboard.dismiss()}>
+      <View
+        style={[
+          styles.container,
+          isInputFocused && styles.containerFocused,
+          style,
+        ]}
+      >
+        <FontAwesome6 name="magnifying-glass" size={12} color="black" />
+        <TextInput
+          placeholder={placeholder}
+          value={value}
+          onChangeText={onInputChange}
+          style={styles.textInput}
+          onFocus={() => setIsInputFocused(true)}
+          onBlur={() => setIsInputFocused(false)}
+          onSubmitEditing={onSearchPress}
+          returnKeyType="search"
+        />
+        {!!value && (
+          <Pressable onPress={onClear}>
+            <FontAwesome6 name="xmark" size={12} color="black" />
+          </Pressable>
+        )}
+      </View>
+    </OutsidePressHandler>
   );
 }
 

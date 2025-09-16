@@ -16,8 +16,10 @@
     "expo": "~53.0.22",
     "expo-status-bar": "~2.2.3",
     "react": "19.0.0",
-    "react-native": "^0.79.5",
-    "react-native-safe-area-context": "^5.4.0"
+    "react-native": "0.79.6",
+    "react-native-safe-area-context": "^5.6.1",
+    "@expo/vector-icons": "^15.0.2",
+    "expo-asset": "~11.1.7"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

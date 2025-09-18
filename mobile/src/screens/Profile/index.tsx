@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Text, Image } from 'react-native';
 import { colors, spacing } from '../../theme';
 import { PageTitle, Button } from '../../shared/components';
 

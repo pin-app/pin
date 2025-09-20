@@ -1,7 +1,9 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { colors, typography } from '../theme';
-import { HomeScreen, MapScreen, ProfileScreen } from '../screens';
+import { View } from 'react-native';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import { colors, typography } from '@/theme';
+import { FeedScreen, MapScreen, ProfileScreen } from '@/screens';
 
 const Tab = createBottomTabNavigator();
 
@@ -33,24 +35,36 @@ export default function TabNavigator() {
       }}
     >
       <Tab.Screen 
-        name="Home" 
-        component={HomeScreen}
+        name="Feed" 
+        component={FeedScreen}
         options={{
-          title: 'Feed',
+          headerShown: false,
+          tabBarLabel: '',
+          tabBarIcon: ({ color, size }) => (
+            <FontAwesome6 name="newspaper" size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen 
         name="Map" 
         component={MapScreen}
         options={{
-          title: 'Map',
+          headerShown: false,
+          tabBarLabel: '',
+          tabBarIcon: ({ color, size }) => (
+            <FontAwesome6 name="globe" size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen}
         options={{
-          title: 'Profile',
+          headerShown: false,
+          tabBarLabel: '',
+          tabBarIcon: ({ color, size }) => (
+            <View style={{ width: size, height: size, borderRadius: size/2, backgroundColor: colors.border }} />
+          ),
         }}
       />
     </Tab.Navigator>

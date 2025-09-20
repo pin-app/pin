@@ -2,47 +2,28 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { colors, spacing, typography } from '@/theme';
-
-interface PostImage {
-  id: string;
-  uri: string;
-}
+import { Post as PostType } from '@/services/api';
 
 interface PostProps {
-  id: string;
-  user: {
-    name: string;
-    avatar: string;
-  };
-  location: string;
-  visits: number;
-  dayOfWeek: string;
-  rating: number;
-  text: string;
-  images: PostImage[];
-  likes: number;
-  isLiked: boolean;
+  post: PostType;
+  likes?: number;
+  isLiked?: boolean;
   onLike: (postId: string) => void;
   onComment: (postId: string) => void;
   onRate: (postId: string) => void;
   onBookmark: (postId: string) => void;
+  showCommentsButton?: boolean;
 }
 
 export default function Post({
-  id,
-  user,
-  location,
-  visits,
-  dayOfWeek,
-  rating,
-  text,
-  images,
-  likes,
-  isLiked,
+  post,
+  likes = 0,
+  isLiked = false,
   onLike,
   onComment,
   onRate,
   onBookmark,
+  showCommentsButton = true,
 }: PostProps) {
   const getRatingColor = (rating: number) => {
     if (rating >= 7) return colors.ratingPositive;
@@ -50,14 +31,38 @@ export default function Post({
     return colors.ratingNegative;
   };
 
+  // Extract data from post
+  const userName = post.user?.display_name || post.user?.username || 'Unknown User';
+  const placeName = post.place?.name || 'Unknown Place';
+  const description = post.description || '';
+  const postImages = post.images || [];
+  
+  // Format date for display
+  const postDate = new Date(post.created_at);
+  const dayOfWeek = postDate.toLocaleDateString('en-US', { weekday: 'long' });
+  
+  // Mock rating for now (we'll add real rating system later)
+  const rating = 8.2;
+  const visits = 3;
+
   return (
     <View style={styles.container}>
       {/* User info and rating */}
       <View style={styles.header}>
-        <View style={styles.avatar} />
+        <View style={styles.avatar}>
+          {post.user?.pfp_url ? (
+            <Image source={{ uri: post.user.pfp_url }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Text style={styles.avatarText}>
+                {userName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
+        </View>
         <View style={styles.userDetails}>
           <Text style={styles.userName}>
-            <Text style={styles.boldText}>{user.name}</Text> ranked <Text style={styles.boldText}>{location}</Text>
+            <Text style={styles.boldText}>{userName}</Text> ranked <Text style={styles.boldText}>{placeName}</Text>
           </Text>
           <Text style={styles.visitText}>{visits} visits • {dayOfWeek}</Text>
         </View>
@@ -67,15 +72,19 @@ export default function Post({
       </View>
 
       {/* Post text */}
-      <View style={styles.textSection}>
-        <Text style={styles.postText}>{text}</Text>
-      </View>
+      {description && (
+        <View style={styles.textSection}>
+          <Text style={styles.postText}>{description}</Text>
+        </View>
+      )}
 
       {/* Images */}
-      {images.length > 0 && (
+      {postImages.length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
-          {images.map((image) => (
-            <View key={image.id} style={styles.postImage} />
+          {postImages.map((image) => (
+            <View key={image.id} style={styles.postImage}>
+              <Image source={{ uri: image.image_url }} style={styles.postImageContent} />
+            </View>
           ))}
         </ScrollView>
       )}
@@ -86,7 +95,7 @@ export default function Post({
           <Text style={styles.likesText}>{likes} likes</Text>
         </View>
         <View style={styles.actionIcons}>
-          <TouchableOpacity onPress={() => onLike(id)} style={styles.actionButton}>
+          <TouchableOpacity onPress={() => onLike(post.id)} style={styles.actionButton}>
             <FontAwesome6 
               name="heart" 
               size={20} 
@@ -94,13 +103,15 @@ export default function Post({
               solid={isLiked}
             />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => onComment(id)} style={styles.actionButton}>
-            <FontAwesome6 name="comment" size={20} color={colors.iconDefault} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => onRate(id)} style={styles.actionButton}>
+          {showCommentsButton && (
+            <TouchableOpacity onPress={() => onComment(post.id)} style={styles.actionButton}>
+              <FontAwesome6 name="comment" size={20} color={colors.iconDefault} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={() => onRate(post.id)} style={styles.actionButton}>
             <FontAwesome6 name="plus" size={20} color={colors.iconDefault} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => onBookmark(id)} style={styles.actionButton}>
+          <TouchableOpacity onPress={() => onBookmark(post.id)} style={styles.actionButton}>
             <FontAwesome6 name="bookmark" size={20} color={colors.iconDefault} />
           </TouchableOpacity>
         </View>
@@ -120,14 +131,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.sm,
-    height: 40,
+    height: 48,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     marginRight: 12,
     backgroundColor: colors.border,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text,
   },
   userDetails: {
     flex: 1,
@@ -145,13 +175,14 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
   },
   ratingBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: colors.text,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 4,
   },
   ratingText: {
     fontSize: typography.fontSize.sm,
@@ -169,11 +200,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   postImage: {
-    width: 100,
-    height: 100,
+    width: 120,
+    height: 120,
     borderRadius: 8,
     marginRight: 8,
     backgroundColor: colors.border,
+    overflow: 'hidden',
+  },
+  postImageContent: {
+    width: '100%',
+    height: '100%',
   },
   engagementSection: {
     flexDirection: 'row',

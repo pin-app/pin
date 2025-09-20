@@ -1,44 +1,51 @@
-.PHONY: run build test clean deps health-check
+.PHONY: help dev dev-stop dev-reset run stop clean
 
-all: deps build
+# Default target
+help:
+	@echo "Available commands:"
+	@echo "  dev       - Start development environment (DB + server with seeding)"
+	@echo "  dev-stop  - Stop development environment"
+	@echo "  dev-reset - Reset database and restart dev environment"
+	@echo "  run       - Run server only (assumes DB is running)"
+	@echo "  stop      - Stop server only"
+	@echo "  clean     - Clean up all containers and volumes"
 
-deps:
-	go mod tidy
-	go mod download
+# Development environment with database
+dev: dev-stop
+	@echo "Starting development environment..."
+	@cd .. && docker-compose up -d db
+	@echo "Waiting for database to be ready..."
+	@sleep 5
+	@echo "Starting server with seeding..."
+	@DEV_MODE=true DATABASE_URL="postgres://postgres:postgres@localhost:5432/pin?sslmode=disable" go run cmd/server/main.go
 
-build:
-	go build -o bin/server cmd/server/main.go
+# Stop development environment
+dev-stop:
+	@echo "Stopping development environment..."
+	@cd .. && docker-compose down
+	@pkill -f "go run cmd/server/main.go" 2>/dev/null || true
 
-PORT ?= 8080
-DB_USER ?= postgres
-DB_PASSWORD ?= postgres
-DB_NAME ?= pin
-DB_HOST ?= localhost
-DB_PORT ?= 5432
-DATABASE_URL ?= postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
+# Reset database and restart
+dev-reset: dev-stop
+	@echo "Resetting database..."
+	@cd .. && docker volume rm pin_pg_data 2>/dev/null || true
+	@cd .. && docker-compose up -d db
+	@echo "Waiting for database to be ready..."
+	@sleep 5
+	@echo "Starting server with fresh seeding..."
+	@DEV_MODE=true DATABASE_URL="postgres://postgres:postgres@localhost:5432/pin?sslmode=disable" go run cmd/server/main.go
 
+# Run server only (assumes DB is running)
 run:
-	PORT=$(PORT) DATABASE_URL=$(DATABASE_URL) go run cmd/server/main.go
+	@echo "Starting server..."
+	@DEV_MODE=true DATABASE_URL="postgres://postgres:postgres@localhost:5432/pin?sslmode=disable" go run cmd/server/main.go
 
-db-up:
-	docker compose up -d db
+# Stop server only
+stop:
+	@pkill -f "go run cmd/server/main.go" 2>/dev/null || true
 
-db-down:
-	docker compose down
-
-migrate-up:
-	DATABASE_URL=$(DATABASE_URL) docker compose run --rm migrate
-
-migrate-create:
-	@test -n "$(name)" || (echo "Usage: make migrate-create name=add_users_table" && exit 1)
-	@mkdir -p migrations
-	docker run --rm -v $(PWD)/migrations:/migrations -w /migrations migrate/migrate:v4.17.1 create -ext sql -seq $(name)
-
-test:
-	go test ./...
-
-clean:
-	rm -rf bin/
-
-install:
-	go mod tidy
+# Clean up everything
+clean: dev-stop
+	@echo "Cleaning up containers and volumes..."
+	@cd .. && docker-compose down --volumes --remove-orphans
+	@docker volume rm pin_pg_data 2>/dev/null || true

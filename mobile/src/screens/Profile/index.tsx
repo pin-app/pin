@@ -1,66 +1,131 @@
-import React from 'react';
-import { View, StyleSheet, Text, SafeAreaView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Text, SafeAreaView, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { colors, spacing } from '@/theme';
 import Button from '@/components/Button';
+import UserProfile from '@/screens/Profile/components/UserProfile';
 import ProfileHeader from './components/ProfileHeader';
+import DevModeSettings from './components/DevModeSettings';
+import DebugInfo from './components/DebugInfo';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiService } from '@/services/api';
 
 export default function ProfileScreen() {
+  const { user, isDevMode } = useAuth();
+  const [showDevSettings, setShowDevSettings] = useState(false);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [postsCount, setPostsCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      loadUserStats();
+    }
+  }, [user]);
+
+  const loadUserStats = async () => {
+    if (!user) return;
+
+    try {
+      setIsLoading(true);
+      
+      try {
+        console.log('Loading user stats for:', user.id);
+        const stats = await apiService.getUserStats(user.id);
+        console.log('User stats loaded:', stats);
+        setPostsCount(stats.posts_count);
+        setFollowingCount(stats.following_count);
+        setFollowersCount(stats.followers_count);
+      } catch (error) {
+        console.error('Failed to load user stats:', error);
+        // fallback to individual calls if stats endpoint fails
+        try {
+          const posts = await apiService.getPostsByUser(user.id, 1, 0);
+          setPostsCount(posts.length);
+        } catch (postError) {
+          console.error('Failed to load posts count:', postError);
+          setPostsCount(0);
+        }
+        setFollowingCount(0);
+        setFollowersCount(0);
+      }
+      
+    } catch (error) {
+      console.error('Failed to load user stats:', error);
+      setFollowingCount(0);
+      setFollowersCount(0);
+      setPostsCount(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleEditProfile = () => {
     console.log('Edit profile pressed');
   };
 
   const handleMenuPress = () => {
-    console.log('Menu pressed - will eventually open settings');
+    setShowDevSettings(true);
   };
+
+
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>No user data available</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ProfileHeader username="raquentin" onMenuPress={handleMenuPress} />
+      <ProfileHeader 
+        username={user.username || user.display_name || 'user'} 
+        onMenuPress={handleMenuPress} 
+      />
       
-      <View style={styles.content}>
-        <View style={styles.profilePicWrapper}/>
-        <View style={styles.bottomSection}>
-          <View style={styles.profileCard}>
-            <View style={styles.statsRow}>
-              <View style={styles.statsCol}>
-                <Text style={styles.statValue}>5</Text>
-                <Text style={styles.statLabel}>Places</Text>
-              </View>
-
-              <View style={styles.statsCol}>
-                <Text style={styles.statValue}>1.7k</Text>
-                <Text style={styles.statLabel}>Following</Text>
-              </View>
-
-              <View style={styles.statsCol}>
-                <Text style={styles.statValue}>2.3k</Text>
-                <Text style={styles.statLabel}>Followers</Text>
-              </View>
-            </View>
-          </View>
-        </View>
+      <ScrollView 
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <UserProfile 
+          user={user} 
+          currentUserId={user.id}
+          showFollowButton={false}
+          postsCount={postsCount}
+          followingCount={followingCount}
+          followersCount={followersCount}
+        />
         
         <View style={styles.buttonRow}>
           <Button 
             title="Edit Profile" 
             onPress={handleEditProfile}
-            variant="primary"
-            size="md"
+            variant="secondary"
+            size="sm"
             style={styles.editButton}
           />
           <Button 
             title="Share Profile" 
             onPress={handleEditProfile}
             variant="secondary"
-            size="md"
+            size="sm"
             style={styles.shareButton}
           />
           <TouchableOpacity style={styles.followButton} onPress={handleEditProfile}>
-            <FontAwesome6 name="user-plus" size={20} color={colors.text} />
+            <FontAwesome6 name="user-plus" size={16} color={colors.text} />
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
+
+      <DevModeSettings 
+        visible={showDevSettings} 
+        onClose={() => setShowDevSettings(false)} 
+      />
     </SafeAreaView>
   );
 }
@@ -72,55 +137,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  scrollContainer: {
+    flex: 1,
+  },
   content: {
-    flex: 1,
-    alignItems: 'center',
     paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xl,
   },
 
-  bottomSection: {
-    marginTop: spacing.lg,
-  },
-
-  profileCard: {
-    alignSelf: 'center',
-    width: 330,
-    height: 80,
-    backgroundColor: 'white',
-    borderRadius: 25,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.08)',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    overflow: 'hidden',
-  },
-
-  statsRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingHorizontal: 8,
-  },
-
-  statsCol: {
-    alignItems: 'center',
-  },
-
-  statLabel: {
-    marginTop: 2,
-    fontSize: 12,
-    color: '#6B7280',
-  },
-
-
-  statValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827'
-  },
 
   divider: {
     width: StyleSheet.hairlineWidth,
@@ -141,8 +165,7 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.md,
-    paddingHorizontal: spacing.md,
+    marginTop: spacing.sm,
     gap: spacing.sm,
   },
   editButton: {
@@ -153,7 +176,7 @@ const styles = StyleSheet.create({
   },
   followButton: {
     width: 44,
-    height: 44,
+    minHeight: 32,
     borderRadius: 8,
     backgroundColor: colors.background,
     borderWidth: 1,
@@ -166,5 +189,29 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     objectFit: 'cover',
-  }
+  },
+  devModeIndicator: {
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: 16,
+    alignSelf: 'center',
+    marginTop: spacing.md,
+  },
+  devModeText: {
+    color: colors.background,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  errorText: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
 });

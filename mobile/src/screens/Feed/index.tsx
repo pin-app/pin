@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, SafeAreaView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, SafeAreaView, Alert } from 'react-native';
 import { colors } from '@/theme';
 import SearchBar from '@/components/SearchBar';
 import SearchResults from '@/components/SearchResults';
 import FeedHeader from './components/FeedHeader';
 import Feed from './components/Feed';
+import CommentsScreen from '../Comments';
+import { apiService } from '@/services/api';
+import { Post, Place, User } from '@/services/api';
 
 // TODO: merge the db tables pr and setup some type of dev mode data in the db by default so we
 // dont have to hardcode this
@@ -49,37 +52,54 @@ const mockPosts = [
   },
 ];
 
-// TODO: same for search results. These should be stored in local storage on the app
-const mockSearchResults = [
-  { id: '1', type: 'recent' as const, title: 'Doraville', subtitle: 'Recent search' },
-  { id: '2', type: 'recent' as const, title: 'Sandy Springs', subtitle: 'Recent search' },
-  { id: '3', type: 'place' as const, title: 'Buford Highway Farmers Market', subtitle: 'Atlanta, GA', icon: 'store' },
-  { id: '4', type: 'member' as const, title: 'Pablo', subtitle: 'Member', icon: 'user' },
-  { id: '5', type: 'member' as const, title: 'Alain', subtitle: 'Member', icon: 'user' },
-];
+interface SearchResult {
+  id: string;
+  type: 'place' | 'member' | 'recent';
+  title: string;
+  subtitle?: string;
+  icon?: string;
+  data?: any; // Store the actual data for navigation
+}
 
 export default function HomeScreen() {
   const [searchValue, setSearchValue] = useState('');
-  const [posts, setPosts] = useState(mockPosts);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [searchResults, setSearchResults] = useState(mockSearchResults);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [showComments, setShowComments] = useState(false);
+
+  useEffect(() => {
+    loadPosts();
+  }, []);
+
+  const loadPosts = async () => {
+    try {
+      setIsLoading(true);
+      const postsData = await apiService.getPosts(20, 0);
+      setPosts(postsData);
+    } catch (error) {
+      console.error('Failed to load posts:', error);
+      // Fallback to mock data if API fails
+      setPosts(mockPosts as any);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLike = (postId: string) => {
-    setPosts(prevPosts =>
-      prevPosts.map(post =>
-        post.id === postId
-          ? {
-              ...post,
-              isLiked: !post.isLiked,
-              likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-            }
-          : post
-      )
-    );
+    // TODO: Implement real like functionality with backend
+    console.log('Like post:', postId);
   };
 
   const handleComment = (postId: string) => {
-    console.log('Comment on post:', postId);
+    const post = posts.find(p => p.id === postId);
+    if (post) {
+      setSelectedPost(post);
+      setShowComments(true);
+    }
   };
 
   const handleRate = (postId: string) => {
@@ -106,8 +126,57 @@ export default function HomeScreen() {
     // idek what search blur is, do nothing for now
   };
 
-  const handleSearchResultPress = (result: any) => {
+  const handleSearch = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setIsSearching(true);
+      const [users, places] = await Promise.all([
+        apiService.searchUsers(query, 5, 0),
+        apiService.searchPlaces(query, 5, 0),
+      ]);
+
+      const results: SearchResult[] = [
+        ...users.map(user => ({
+          id: user.id,
+          type: 'member' as const,
+          title: user.display_name || user.username || 'Unknown User',
+          subtitle: user.username ? `@${user.username}` : 'Member',
+          icon: 'user',
+          data: user,
+        })),
+        ...places.map(place => ({
+          id: place.id,
+          type: 'place' as const,
+          title: place.name,
+          subtitle: place.properties?.address || place.properties?.city || 'Place',
+          icon: 'store',
+          data: place,
+        })),
+      ];
+
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Search failed:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchResultPress = (result: SearchResult) => {
     console.log('Search result pressed:', result);
+    // TODO: Navigate to user profile or place details
+    if (result.type === 'member') {
+      // Navigate to user profile
+      console.log('Navigate to user profile:', result.data);
+    } else if (result.type === 'place') {
+      // Navigate to place details or show posts for this place
+      console.log('Navigate to place:', result.data);
+    }
   };
 
   const handleClearRecent = () => {
@@ -118,6 +187,20 @@ export default function HomeScreen() {
     setIsSearchFocused(false);
     setSearchValue(''); // clear the search value when closing
   };
+
+  const handleBackFromComments = () => {
+    setShowComments(false);
+    setSelectedPost(null);
+  };
+
+  if (showComments && selectedPost) {
+    return (
+      <CommentsScreen
+        post={selectedPost}
+        onBack={handleBackFromComments}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -130,9 +213,15 @@ export default function HomeScreen() {
       <SearchBar 
         placeholder="search a place, member, etc"
         value={searchValue}
-        onInputChange={setSearchValue}
-        onSearchPress={() => console.log('Search:', searchValue)}
-        onClear={() => setSearchValue('')}
+        onInputChange={(value) => {
+          setSearchValue(value);
+          handleSearch(value);
+        }}
+        onSearchPress={() => handleSearch(searchValue)}
+        onClear={() => {
+          setSearchValue('');
+          setSearchResults([]);
+        }}
         onFocus={handleSearchFocus}
         onBlur={handleSearchBlur}
       />

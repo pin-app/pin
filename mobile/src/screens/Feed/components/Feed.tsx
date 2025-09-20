@@ -3,28 +3,10 @@ import { FlatList, StyleSheet, View } from 'react-native';
 import { colors } from '@/theme/colors';
 import { spacing } from '@/theme/spacing';
 import Post from '@/components/Post';
-
-interface PostData {
-  id: string;
-  user: {
-    name: string;
-    avatar: string;
-  };
-  location: string;
-  visits: number;
-  dayOfWeek: string;
-  rating: number;
-  text: string;
-  images: Array<{
-    id: string;
-    uri: string;
-  }>;
-  likes: number;
-  isLiked: boolean;
-}
+import { Post as PostType } from '@/services/api';
 
 interface FeedProps {
-  posts: PostData[];
+  posts: PostType[];
   onLike: (postId: string) => void;
   onComment: (postId: string) => void;
   onRate: (postId: string) => void;
@@ -44,19 +26,12 @@ export default function Feed({
   refreshing = false,
   onRefresh,
 }: FeedProps) {
-  const renderPost = ({ item, index }: { item: PostData; index: number }) => (
+  const renderPost = ({ item, index }: { item: PostType; index: number }) => (
     <>
       <Post
-        id={item.id}
-        user={item.user}
-        location={item.location}
-        visits={item.visits}
-        dayOfWeek={item.dayOfWeek}
-        rating={item.rating}
-        text={item.text}
-        images={item.images}
-        likes={item.likes}
-        isLiked={item.isLiked}
+        post={item}
+        likes={0} // TODO: Add real likes from backend
+        isLiked={false} // TODO: Add real like status from backend
         onLike={onLike}
         onComment={onComment}
         onRate={onRate}

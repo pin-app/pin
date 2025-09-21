@@ -30,7 +30,6 @@ func NewPostHandler(postRepo repository.PostRepository, placeRepo repository.Pla
 	}
 }
 
-// CreatePost handles POST /api/posts
 func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	var req models.PostCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -43,7 +42,6 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify place exists
 	_, err := h.placeRepo.GetByID(r.Context(), req.PlaceID)
 	if err != nil {
 		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Place not found"})
@@ -87,7 +85,6 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusCreated, postResponse)
 }
 
-// GetPost handles GET /api/posts/{id}
 func (h *PostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Path[len("/api/posts/"):]
 	id, err := uuid.Parse(idStr)
@@ -106,7 +103,6 @@ func (h *PostHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusOK, postResponse)
 }
 
-// UpdatePost handles PUT /api/posts/{id}
 func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Path[len("/api/posts/"):]
 	id, err := uuid.Parse(idStr)
@@ -150,7 +146,6 @@ func (h *PostHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusOK, postResponse)
 }
 
-// DeletePost handles DELETE /api/posts/{id}
 func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Path[len("/api/posts/"):]
 	id, err := uuid.Parse(idStr)
@@ -169,13 +164,12 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusNoContent, nil)
 }
 
-// ListPosts handles GET /api/posts
 func (h *PostHandler) ListPosts(w http.ResponseWriter, r *http.Request) {
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
 
-	limit := 20 // default
-	offset := 0 // default
+	limit := 20
+	offset := 0
 
 	if limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
@@ -208,9 +202,7 @@ func (h *PostHandler) ListPosts(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ListPostsByUser handles GET /api/users/{id}/posts
 func (h *PostHandler) ListPostsByUser(w http.ResponseWriter, r *http.Request) {
-	// Extract user ID from path like "/api/users/{id}/posts"
 	path := r.URL.Path
 	userIDStr := path[len("/api/users/") : len(path)-len("/posts")]
 	userID, err := uuid.Parse(userIDStr)
@@ -222,8 +214,8 @@ func (h *PostHandler) ListPostsByUser(w http.ResponseWriter, r *http.Request) {
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
 
-	limit := 20 // default
-	offset := 0 // default
+	limit := 20
+	offset := 0
 
 	if limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
@@ -257,9 +249,7 @@ func (h *PostHandler) ListPostsByUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ListPostsByPlace handles GET /api/places/{id}/posts
 func (h *PostHandler) ListPostsByPlace(w http.ResponseWriter, r *http.Request) {
-	// Extract place ID from path like "/api/places/{id}/posts"
 	path := r.URL.Path
 	placeIDStr := path[len("/api/places/") : len(path)-len("/posts")]
 	placeID, err := uuid.Parse(placeIDStr)
@@ -271,8 +261,8 @@ func (h *PostHandler) ListPostsByPlace(w http.ResponseWriter, r *http.Request) {
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
 
-	limit := 20 // default
-	offset := 0 // default
+	limit := 20
+	offset := 0
 
 	if limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {

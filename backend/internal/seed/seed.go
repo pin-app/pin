@@ -11,7 +11,6 @@ import (
 	"github.com/pin-app/pin/internal/repository"
 )
 
-// Structured data types for deterministic seeding
 type PostImage struct {
 	ImageURL  string
 	Caption   string
@@ -83,24 +82,20 @@ func NewSeeder(
 func (s *Seeder) SeedDevData(ctx context.Context) error {
 	slog.Info("seeding development data")
 
-	// Define the structured data
 	userProfiles := s.getUserProfiles()
 	placeProfiles := s.getPlaceProfiles()
 	followRelationships := s.getFollowRelationships()
 
-	// Seed places first
 	places, err := s.seedPlaces(ctx, placeProfiles)
 	if err != nil {
 		return fmt.Errorf("failed to seed places: %w", err)
 	}
 
-	// Seed users with their complete profiles
 	users, err := s.seedUserProfiles(ctx, userProfiles, places)
 	if err != nil {
 		return fmt.Errorf("failed to seed user profiles: %w", err)
 	}
 
-	// Seed follows
 	if err := s.seedFollowRelationships(ctx, users, followRelationships); err != nil {
 		return fmt.Errorf("failed to seed follows: %w", err)
 	}
@@ -113,7 +108,7 @@ func (s *Seeder) SeedDevData(ctx context.Context) error {
 	return nil
 }
 
-// Data definition functions - modify these to add/change user profiles
+// data definition functions - modify these to add/change user profiles
 func (s *Seeder) getUserProfiles() []UserProfile {
 	return []UserProfile{
 		{
@@ -252,7 +247,6 @@ func (s *Seeder) seedUserProfiles(ctx context.Context, userProfiles []UserProfil
 	var users []*models.User
 	usernameToUser := make(map[string]*models.User)
 
-	// Create users first
 	for _, profile := range userProfiles {
 		existingUser, err := s.userRepo.GetByEmail(ctx, profile.Email)
 		if err == nil && existingUser != nil {
@@ -283,17 +277,15 @@ func (s *Seeder) seedUserProfiles(ctx context.Context, userProfiles []UserProfil
 		fmt.Printf("UserID for new user %s: %s\n", profile.Username, user.ID)
 	}
 
-	// Create posts for each user
 	for _, profile := range userProfiles {
 		user := usernameToUser[profile.Username]
 
 		for _, postData := range profile.Posts {
-			// Assign place based on user location
 			var placeID uuid.UUID
 			if profile.Location == "uhouse" {
-				placeID = places[0].ID // University House
+				placeID = places[0].ID
 			} else {
-				placeID = places[1].ID // Bobby-Dodd Stadium
+				placeID = places[1].ID
 			}
 
 			post := &models.Post{
@@ -309,7 +301,6 @@ func (s *Seeder) seedUserProfiles(ctx context.Context, userProfiles []UserProfil
 				return nil, fmt.Errorf("failed to create post: %w", err)
 			}
 
-			// Add images to the post
 			for _, imageData := range postData.Images {
 				image := &models.PostImage{
 					ID:        uuid.New(),
@@ -325,7 +316,6 @@ func (s *Seeder) seedUserProfiles(ctx context.Context, userProfiles []UserProfil
 				}
 			}
 
-			// Add comments to the post
 			for _, commentData := range postData.Comments {
 				if err := s.createCommentWithReplies(ctx, post.ID, commentData, usernameToUser); err != nil {
 					return nil, fmt.Errorf("failed to create comment: %w", err)
@@ -338,7 +328,6 @@ func (s *Seeder) seedUserProfiles(ctx context.Context, userProfiles []UserProfil
 }
 
 func (s *Seeder) createCommentWithReplies(ctx context.Context, postID uuid.UUID, commentData Comment, usernameToUser map[string]*models.User) error {
-	// Find the user who made the comment
 	commenter, exists := usernameToUser[commentData.Username]
 	if !exists {
 		return fmt.Errorf("user %s not found for comment", commentData.Username)
@@ -357,9 +346,7 @@ func (s *Seeder) createCommentWithReplies(ctx context.Context, postID uuid.UUID,
 		return fmt.Errorf("failed to create comment: %w", err)
 	}
 
-	// Add replies
 	for _, replyData := range commentData.Replies {
-		// Find the user who made the reply
 		replier, exists := usernameToUser[replyData.Username]
 		if !exists {
 			return fmt.Errorf("user %s not found for reply", replyData.Username)

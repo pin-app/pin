@@ -35,16 +35,13 @@ export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
       setIsLoading(true);
       const commentsData = await apiService.getCommentsByPost(post.id);
       
-      // Build hierarchical structure from flat list
       const commentMap = new Map<string, CommentType & { replies: CommentType[] }>();
       const rootComments: (CommentType & { replies: CommentType[] })[] = [];
       
-      // First pass: create all comments with empty replies array
       commentsData.forEach(comment => {
         commentMap.set(comment.id, { ...comment, replies: [] });
       });
       
-      // Second pass: build the tree structure
       commentsData.forEach(comment => {
         const commentWithReplies = commentMap.get(comment.id)!;
         if (comment.parent_id) {
@@ -113,7 +110,6 @@ export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <FontAwesome6 name="arrow-left" size={20} color={colors.text} />
@@ -122,7 +118,6 @@ export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
       </View>
 
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Post */}
         <View style={styles.postContainer}>
           <Post
             post={post}

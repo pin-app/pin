@@ -1,6 +1,6 @@
 export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_BASE ??
-  (__DEV__ ? "http://localhost:8080" : "https://api.yourprod.com");
+  (__DEV__ ? "http://localhost:8080" : "todo, actual link");
 
 export const DEV_MODE = process.env.EXPO_PUBLIC_DEV_MODE === 'true' || __DEV__;
 

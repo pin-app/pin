@@ -29,7 +29,6 @@ func NewRatingHandler(ratingRepo repository.RatingRepository, placeRepo reposito
 	}
 }
 
-// CreateRating handles POST /api/places/{id}/ratings
 func (h *RatingHandler) CreateRating(w http.ResponseWriter, r *http.Request) {
 	placeIDStr := r.URL.Path[len("/api/places/") : len("/api/places/")+36] // UUID length
 	placeID, err := uuid.Parse(placeIDStr)
@@ -49,7 +48,6 @@ func (h *RatingHandler) CreateRating(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify place exists
 	_, err = h.placeRepo.GetByID(r.Context(), placeID)
 	if err != nil {
 		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Place not found"})
@@ -75,7 +73,6 @@ func (h *RatingHandler) CreateRating(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusCreated, rating)
 }
 
-// GetRating handles GET /api/places/{id}/ratings/me
 func (h *RatingHandler) GetRating(w http.ResponseWriter, r *http.Request) {
 	placeIDStr := r.URL.Path[len("/api/places/") : len("/api/places/")+36] // UUID length
 	placeID, err := uuid.Parse(placeIDStr)
@@ -95,7 +92,6 @@ func (h *RatingHandler) GetRating(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusOK, rating)
 }
 
-// UpdateRating handles PUT /api/places/{id}/ratings
 func (h *RatingHandler) UpdateRating(w http.ResponseWriter, r *http.Request) {
 	placeIDStr := r.URL.Path[len("/api/places/") : len("/api/places/")+36] // UUID length
 	placeID, err := uuid.Parse(placeIDStr)
@@ -132,7 +128,6 @@ func (h *RatingHandler) UpdateRating(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusOK, rating)
 }
 
-// DeleteRating handles DELETE /api/places/{id}/ratings
 func (h *RatingHandler) DeleteRating(w http.ResponseWriter, r *http.Request) {
 	placeIDStr := r.URL.Path[len("/api/places/") : len("/api/places/")+36] // UUID length
 	placeID, err := uuid.Parse(placeIDStr)
@@ -151,7 +146,6 @@ func (h *RatingHandler) DeleteRating(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusNoContent, nil)
 }
 
-// ListRatingsByPlace handles GET /api/places/{id}/ratings
 func (h *RatingHandler) ListRatingsByPlace(w http.ResponseWriter, r *http.Request) {
 	placeIDStr := r.URL.Path[len("/api/places/") : len("/api/places/")+36] // UUID length
 	placeID, err := uuid.Parse(placeIDStr)
@@ -193,7 +187,6 @@ func (h *RatingHandler) ListRatingsByPlace(w http.ResponseWriter, r *http.Reques
 	})
 }
 
-// GetAverageRating handles GET /api/places/{id}/ratings/average
 func (h *RatingHandler) GetAverageRating(w http.ResponseWriter, r *http.Request) {
 	placeIDStr := r.URL.Path[len("/api/places/") : len("/api/places/")+36] // UUID length
 	placeID, err := uuid.Parse(placeIDStr)
@@ -215,7 +208,6 @@ func (h *RatingHandler) GetAverageRating(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-// CreateComparison handles POST /api/places/compare
 func (h *RatingHandler) CreateComparison(w http.ResponseWriter, r *http.Request) {
 	var req models.PlaceComparisonRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -228,7 +220,6 @@ func (h *RatingHandler) CreateComparison(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Verify both places exist
 	_, err := h.placeRepo.GetByID(r.Context(), req.BetterPlaceID)
 	if err != nil {
 		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Better place not found"})
@@ -260,7 +251,6 @@ func (h *RatingHandler) CreateComparison(w http.ResponseWriter, r *http.Request)
 	server.WriteJSON(w, http.StatusCreated, comparison)
 }
 
-// ListComparisonsByUser handles GET /api/users/{id}/comparisons
 func (h *RatingHandler) ListComparisonsByUser(w http.ResponseWriter, r *http.Request) {
 	userIDStr := r.URL.Path[len("/api/users/") : len("/api/users/")+36] // UUID length
 	userID, err := uuid.Parse(userIDStr)

@@ -30,7 +30,6 @@ func NewCommentHandler(commentRepo repository.CommentRepository, postRepo reposi
 	}
 }
 
-// CreateComment handles POST /api/comments
 func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	var req models.CommentCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -43,14 +42,12 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify post exists
 	_, err := h.postRepo.GetByID(r.Context(), req.PostID)
 	if err != nil {
 		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Post not found"})
 		return
 	}
 
-	// If parent_id is provided, verify parent comment exists
 	if req.ParentID != nil {
 		_, err := h.commentRepo.GetByID(r.Context(), *req.ParentID)
 		if err != nil {
@@ -62,7 +59,7 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	comment := &models.Comment{
 		ID:        uuid.New(),
 		PostID:    req.PostID,
-		UserID:    uuid.New(), // TODO: Get from session/auth
+		UserID:    uuid.New(),
 		ParentID:  req.ParentID,
 		Content:   req.Content,
 		CreatedAt: time.Now(),
@@ -78,7 +75,6 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusCreated, commentResponse)
 }
 
-// GetComment handles GET /api/comments/{id}
 func (h *CommentHandler) GetComment(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Path[len("/api/comments/"):]
 	id, err := uuid.Parse(idStr)
@@ -97,7 +93,6 @@ func (h *CommentHandler) GetComment(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusOK, commentResponse)
 }
 
-// UpdateComment handles PUT /api/comments/{id}
 func (h *CommentHandler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Path[len("/api/comments/"):]
 	id, err := uuid.Parse(idStr)
@@ -117,16 +112,12 @@ func (h *CommentHandler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get existing comment
 	comment, err := h.commentRepo.GetByID(r.Context(), id)
 	if err != nil {
 		server.WriteJSON(w, http.StatusNotFound, map[string]string{"error": "Comment not found"})
 		return
 	}
 
-	// TODO: Check if user owns the comment
-
-	// Update fields
 	comment.Content = req.Content
 	comment.UpdatedAt = time.Now()
 
@@ -139,7 +130,6 @@ func (h *CommentHandler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusOK, commentResponse)
 }
 
-// DeleteComment handles DELETE /api/comments/{id}
 func (h *CommentHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Path[len("/api/comments/"):]
 	id, err := uuid.Parse(idStr)
@@ -147,8 +137,6 @@ func (h *CommentHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid comment ID"})
 		return
 	}
-
-	// TODO: Check if user owns the comment
 
 	if err := h.commentRepo.Delete(r.Context(), id); err != nil {
 		server.WriteJSON(w, http.StatusNotFound, map[string]string{"error": "Comment not found"})
@@ -158,7 +146,6 @@ func (h *CommentHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusNoContent, nil)
 }
 
-// ListCommentsByPost handles GET /api/posts/{id}/comments
 func (h *CommentHandler) ListCommentsByPost(w http.ResponseWriter, r *http.Request) {
 	postIDStr := r.URL.Path[len("/api/posts/") : len("/api/posts/")+36] // UUID length
 	postID, err := uuid.Parse(postIDStr)
@@ -170,8 +157,8 @@ func (h *CommentHandler) ListCommentsByPost(w http.ResponseWriter, r *http.Reque
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
 
-	limit := 20 // default
-	offset := 0 // default
+	limit := 20
+	offset := 0
 
 	if limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
@@ -205,7 +192,6 @@ func (h *CommentHandler) ListCommentsByPost(w http.ResponseWriter, r *http.Reque
 	})
 }
 
-// ListCommentsByUser handles GET /api/users/{id}/comments
 func (h *CommentHandler) ListCommentsByUser(w http.ResponseWriter, r *http.Request) {
 	userIDStr := r.URL.Path[len("/api/users/") : len("/api/users/")+36] // UUID length
 	userID, err := uuid.Parse(userIDStr)
@@ -217,8 +203,8 @@ func (h *CommentHandler) ListCommentsByUser(w http.ResponseWriter, r *http.Reque
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
 
-	limit := 20 // default
-	offset := 0 // default
+	limit := 20
+	offset := 0
 
 	if limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
@@ -252,7 +238,6 @@ func (h *CommentHandler) ListCommentsByUser(w http.ResponseWriter, r *http.Reque
 	})
 }
 
-// GetCommentReplies handles GET /api/comments/{id}/replies
 func (h *CommentHandler) GetCommentReplies(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Path[len("/api/comments/") : len("/api/comments/")+36] // UUID length
 	id, err := uuid.Parse(idStr)
@@ -264,8 +249,8 @@ func (h *CommentHandler) GetCommentReplies(w http.ResponseWriter, r *http.Reques
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
 
-	limit := 20 // default
-	offset := 0 // default
+	limit := 20
+	offset := 0
 
 	if limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {

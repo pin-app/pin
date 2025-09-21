@@ -13,10 +13,8 @@ interface ProfileHeaderProps {
 export default function ProfileHeader({ username, onMenuPress }: ProfileHeaderProps) {
   return (
     <View style={styles.container}>
-      {/* Username */}
       <Text style={styles.username}>{username}</Text>
       
-      {/* Menu button */}
       <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
         <FontAwesome6 name="bars" size={20} color={colors.iconDefault} />
       </TouchableOpacity>

@@ -29,7 +29,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Check for dev mode
 	devMode := os.Getenv("DEV_MODE") == "true"
 	if devMode {
 		slog.Info("running in development mode - authentication bypassed for dev users")
@@ -53,7 +52,6 @@ func main() {
 		defer db.Close()
 	}
 
-	// In dev mode, require database connection for seeding
 	if devMode && db == nil {
 		slog.Error("dev mode requires DATABASE_URL to be set for seeding dummy data")
 		os.Exit(1)
@@ -63,11 +61,9 @@ func main() {
 	if db != nil {
 		srv = server.NewWithDB(db.GetConnection())
 
-		// Seed development data if in dev mode
 		if devMode {
 			slog.Info("seeding development data")
 
-			// Initialize repositories
 			userRepo := repository.NewUserRepository(db)
 			placeRepo := repository.NewPlaceRepository(db)
 			postRepo := repository.NewPostRepository(db)
@@ -86,7 +82,6 @@ func main() {
 
 			if err := seeder.SeedDevData(context.Background()); err != nil {
 				slog.Error("failed to seed development data", "error", err)
-				// Don't exit, just log the error and continue
 			} else {
 				slog.Info("development data seeded successfully")
 			}

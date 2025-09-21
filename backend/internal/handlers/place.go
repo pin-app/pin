@@ -25,7 +25,6 @@ func NewPlaceHandler(placeRepo repository.PlaceRepository) *PlaceHandler {
 	}
 }
 
-// CreatePlace handles POST /api/places
 func (h *PlaceHandler) CreatePlace(w http.ResponseWriter, r *http.Request) {
 	var req models.PlaceCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -55,7 +54,6 @@ func (h *PlaceHandler) CreatePlace(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusCreated, place.ToResponse())
 }
 
-// GetPlace handles GET /api/places/{id}
 func (h *PlaceHandler) GetPlace(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Path[len("/api/places/"):]
 	id, err := uuid.Parse(idStr)
@@ -73,7 +71,6 @@ func (h *PlaceHandler) GetPlace(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusOK, place.ToResponse())
 }
 
-// UpdatePlace handles PUT /api/places/{id}
 func (h *PlaceHandler) UpdatePlace(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Path[len("/api/places/"):]
 	id, err := uuid.Parse(idStr)
@@ -93,14 +90,12 @@ func (h *PlaceHandler) UpdatePlace(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get existing place
 	place, err := h.placeRepo.GetByID(r.Context(), id)
 	if err != nil {
 		server.WriteJSON(w, http.StatusNotFound, map[string]string{"error": "Place not found"})
 		return
 	}
 
-	// Update fields
 	if req.Name != nil {
 		place.Name = *req.Name
 	}
@@ -120,7 +115,6 @@ func (h *PlaceHandler) UpdatePlace(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusOK, place.ToResponse())
 }
 
-// DeletePlace handles DELETE /api/places/{id}
 func (h *PlaceHandler) DeletePlace(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Path[len("/api/places/"):]
 	id, err := uuid.Parse(idStr)
@@ -137,13 +131,12 @@ func (h *PlaceHandler) DeletePlace(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusNoContent, nil)
 }
 
-// ListPlaces handles GET /api/places
 func (h *PlaceHandler) ListPlaces(w http.ResponseWriter, r *http.Request) {
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
 
-	limit := 20 // default
-	offset := 0 // default
+	limit := 20
+	offset := 0
 
 	if limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
@@ -176,7 +169,6 @@ func (h *PlaceHandler) ListPlaces(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// SearchPlaces handles GET /api/places/search
 func (h *PlaceHandler) SearchPlaces(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {
@@ -187,8 +179,8 @@ func (h *PlaceHandler) SearchPlaces(w http.ResponseWriter, r *http.Request) {
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
 
-	limit := 20 // default
-	offset := 0 // default
+	limit := 20
+	offset := 0
 
 	if limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
@@ -222,7 +214,6 @@ func (h *PlaceHandler) SearchPlaces(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// SearchNearbyPlaces handles GET /api/places/nearby
 func (h *PlaceHandler) SearchNearbyPlaces(w http.ResponseWriter, r *http.Request) {
 	latStr := r.URL.Query().Get("lat")
 	lngStr := r.URL.Query().Get("lng")

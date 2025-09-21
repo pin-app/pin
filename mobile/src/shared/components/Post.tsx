@@ -31,23 +31,20 @@ export default function Post({
     return colors.ratingNegative;
   };
 
-  // Extract data from post
   const userName = post.user?.display_name || post.user?.username || 'Unknown User';
   const placeName = post.place?.name || 'Unknown Place';
   const description = post.description || '';
   const postImages = post.images || [];
   
-  // Format date for display
   const postDate = new Date(post.created_at);
   const dayOfWeek = postDate.toLocaleDateString('en-US', { weekday: 'long' });
   
-  // Mock rating for now (we'll add real rating system later)
+  // TODO: use real rating
   const rating = 8.2;
   const visits = 3;
 
   return (
     <View style={styles.container}>
-      {/* User info and rating */}
       <View style={styles.header}>
         <View style={styles.avatar}>
           {post.user?.pfp_url ? (
@@ -71,14 +68,12 @@ export default function Post({
         </View>
       </View>
 
-      {/* Post text */}
       {description && (
         <View style={styles.textSection}>
           <Text style={styles.postText}>{description}</Text>
         </View>
       )}
 
-      {/* Images */}
       {postImages.length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
           {postImages.map((image) => (
@@ -89,7 +84,6 @@ export default function Post({
         </ScrollView>
       )}
 
-      {/* Engagement icons */}
       <View style={styles.engagementSection}>
         <View style={styles.likesContainer}>
           <Text style={styles.likesText}>{likes} likes</Text>

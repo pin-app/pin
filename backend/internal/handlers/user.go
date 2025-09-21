@@ -25,7 +25,6 @@ func NewUserHandler(userRepo repository.UserRepository) *UserHandler {
 	}
 }
 
-// CreateUser handles POST /api/users
 func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var req models.UserCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -58,7 +57,6 @@ func (h *UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusCreated, user.ToResponse())
 }
 
-// GetUser handles GET /api/users/{id}
 func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Path[len("/api/users/"):]
 	id, err := uuid.Parse(idStr)
@@ -76,7 +74,6 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusOK, user.ToResponse())
 }
 
-// UpdateUser handles PUT /api/users/{id}
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Path[len("/api/users/"):]
 	id, err := uuid.Parse(idStr)
@@ -96,14 +93,12 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get existing user
 	user, err := h.userRepo.GetByID(r.Context(), id)
 	if err != nil {
 		server.WriteJSON(w, http.StatusNotFound, map[string]string{"error": "User not found"})
 		return
 	}
 
-	// Update fields
 	if req.Username != nil {
 		user.Username = req.Username
 	}
@@ -129,7 +124,6 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusOK, user.ToResponse())
 }
 
-// DeleteUser handles DELETE /api/users/{id}
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Path[len("/api/users/"):]
 	id, err := uuid.Parse(idStr)
@@ -146,13 +140,12 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusNoContent, nil)
 }
 
-// ListUsers handles GET /api/users
 func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
 
-	limit := 20 // default
-	offset := 0 // default
+	limit := 20
+	offset := 0
 
 	if limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
@@ -185,7 +178,6 @@ func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// SearchUsers handles GET /api/users/search
 func (h *UserHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {
@@ -196,8 +188,8 @@ func (h *UserHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
 
-	limit := 20 // default
-	offset := 0 // default
+	limit := 20
+	offset := 0
 
 	if limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {

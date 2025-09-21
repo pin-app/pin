@@ -26,9 +26,7 @@ func NewFollowHandler(followRepo repository.FollowRepository, userRepo repositor
 	}
 }
 
-// FollowUser handles POST /api/users/{id}/follow
 func (h *FollowHandler) FollowUser(w http.ResponseWriter, r *http.Request) {
-	// Extract user ID from path like "/api/users/{id}/follow"
 	path := r.URL.Path
 	userIDStr := path[len("/api/users/") : len(path)-len("/follow")]
 	userID, err := uuid.Parse(userIDStr)
@@ -37,24 +35,19 @@ func (h *FollowHandler) FollowUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Get current user ID from session/auth
-	// For now, we'll use a placeholder - this should be replaced with actual auth
 	currentUserID := uuid.New() // This should come from session
 
-	// Check if user is trying to follow themselves
 	if currentUserID == userID {
 		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Cannot follow yourself"})
 		return
 	}
 
-	// Check if user exists
 	_, err = h.userRepo.GetByID(r.Context(), userID)
 	if err != nil {
 		server.WriteJSON(w, http.StatusNotFound, map[string]string{"error": "User not found"})
 		return
 	}
 
-	// Check if already following
 	exists, err := h.followRepo.IsFollowing(r.Context(), currentUserID, userID)
 	if err != nil {
 		server.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to check follow status"})
@@ -66,7 +59,6 @@ func (h *FollowHandler) FollowUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create follow relationship
 	follow := &models.Follow{
 		ID:          uuid.New(),
 		FollowerID:  currentUserID,
@@ -83,9 +75,7 @@ func (h *FollowHandler) FollowUser(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusCreated, follow.ToResponse())
 }
 
-// UnfollowUser handles DELETE /api/users/{id}/follow
 func (h *FollowHandler) UnfollowUser(w http.ResponseWriter, r *http.Request) {
-	// Extract user ID from path like "/api/users/{id}/follow"
 	path := r.URL.Path
 	userIDStr := path[len("/api/users/") : len(path)-len("/follow")]
 	userID, err := uuid.Parse(userIDStr)
@@ -94,11 +84,8 @@ func (h *FollowHandler) UnfollowUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Get current user ID from session/auth
-	// For now, we'll use a placeholder - this should be replaced with actual auth
 	currentUserID := uuid.New() // This should come from session
 
-	// Delete follow relationship
 	if err := h.followRepo.DeleteFollow(r.Context(), currentUserID, userID); err != nil {
 		server.WriteJSON(w, http.StatusNotFound, map[string]string{"error": "Follow relationship not found"})
 		return
@@ -107,9 +94,7 @@ func (h *FollowHandler) UnfollowUser(w http.ResponseWriter, r *http.Request) {
 	server.WriteJSON(w, http.StatusNoContent, nil)
 }
 
-// GetFollowing handles GET /api/users/{id}/following
 func (h *FollowHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
-	// Extract user ID from path like "/api/users/{id}/following"
 	path := r.URL.Path
 	userIDStr := path[len("/api/users/") : len(path)-len("/following")]
 	userID, err := uuid.Parse(userIDStr)
@@ -156,9 +141,7 @@ func (h *FollowHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetFollowers handles GET /api/users/{id}/followers
 func (h *FollowHandler) GetFollowers(w http.ResponseWriter, r *http.Request) {
-	// Extract user ID from path like "/api/users/{id}/followers"
 	path := r.URL.Path
 	userIDStr := path[len("/api/users/") : len(path)-len("/followers")]
 	userID, err := uuid.Parse(userIDStr)
@@ -205,9 +188,7 @@ func (h *FollowHandler) GetFollowers(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// CheckFollowStatus handles GET /api/users/{id}/follow-status
 func (h *FollowHandler) CheckFollowStatus(w http.ResponseWriter, r *http.Request) {
-	// Extract user ID from path like "/api/users/{id}/follow-status"
 	path := r.URL.Path
 	userIDStr := path[len("/api/users/") : len(path)-len("/follow-status")]
 	userID, err := uuid.Parse(userIDStr)
@@ -216,8 +197,6 @@ func (h *FollowHandler) CheckFollowStatus(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// TODO: Get current user ID from session/auth
-	// For now, we'll use a placeholder - this should be replaced with actual auth
 	currentUserID := uuid.New() // This should come from session
 
 	// Check if following
@@ -234,9 +213,7 @@ func (h *FollowHandler) CheckFollowStatus(w http.ResponseWriter, r *http.Request
 	})
 }
 
-// GetUserStats handles GET /api/users/{id}/stats
 func (h *FollowHandler) GetUserStats(w http.ResponseWriter, r *http.Request) {
-	// Extract user ID from path like "/api/users/{id}/stats"
 	path := r.URL.Path
 	userIDStr := path[len("/api/users/") : len(path)-len("/stats")]
 	userID, err := uuid.Parse(userIDStr)
@@ -245,7 +222,6 @@ func (h *FollowHandler) GetUserStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if user exists
 	_, err = h.userRepo.GetByID(r.Context(), userID)
 	if err != nil {
 		server.WriteJSON(w, http.StatusNotFound, map[string]string{"error": "User not found"})

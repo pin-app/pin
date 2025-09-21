@@ -1,27 +1,8 @@
 # API docs
 
-## Base URL
-```
-http://localhost:8080/api
-```
+## Auth
 
-## Authentication
-
-The API uses OAuth 2.0 for authentication with Google and Apple providers. Most endpoints require authentication via session tokens.
-
-### Authentication Methods
-
-1. **OAuth 2.0** - Use Google or Apple OAuth for user authentication
-2. **Session Tokens** - Use Bearer tokens for authenticated requests
-3. **Dev Mode** - In development, authentication can be bypassed using dev headers
-
-### OAuth Flow
-
-1. Redirect user to `/api/auth/google` or `/api/auth/apple`
-2. User completes OAuth flow with provider
-3. Provider redirects to callback endpoint
-4. API returns session token and user information
-5. Use session token in `Authorization: Bearer <token>` header for subsequent requests
+We're using OAuth 2.0 for authentication with Google and Apple. Most endpoints require authentication via session tokens.
 
 ### Dev Mode
 
@@ -30,13 +11,15 @@ Set `DEV_MODE=true` environment variable to enable development mode:
 - A default dev user is created automatically
 - Useful for development and testing
 
+Or just use the dev-specific commands in the Makefile.
+
 ## API Endpoints
 
 ### Authentication
 
 #### Google OAuth
 ```http
-GET /api/auth/google?redirect_url=https://yourapp.com/callback
+GET /api/auth/google?redirect_url=https://api.pin.com/callback
 ```
 Redirects user to Google OAuth consent screen.
 
@@ -48,7 +31,7 @@ Handles Google OAuth callback and returns session token.
 
 #### Apple OAuth
 ```http
-GET /api/auth/apple?redirect_url=https://yourapp.com/callback
+GET /api/auth/apple?redirect_url=https://api.pin.com/callback
 ```
 Redirects user to Apple OAuth consent screen.
 
@@ -93,7 +76,7 @@ Content-Type: application/json
 ```http
 GET /api/users/{id}
 ```
-*Optional authentication - returns additional data if authenticated*
+*optional auth - returns additional data if authenticated*
 
 #### Update User
 ```http
@@ -399,53 +382,10 @@ All successful responses return JSON with the following structure:
 - `404 Not Found` - Resource not found
 - `500 Internal Server Error` - Server error
 
-## Database Schema
-
-The API uses PostgreSQL with the following main tables:
-
-- `users` - User profiles and authentication
-- `oauth_accounts` - OAuth provider accounts
-- `sessions` - User sessions
-- `places` - Geographic locations with PostGIS support
-- `place_relations` - Relationships between places
-- `posts` - User posts about places
-- `post_images` - Images associated with posts
-- `comments` - Hierarchical comments on posts
-- `place_ratings` - User ratings for places (0-100)
-- `place_comparisons` - Relative comparisons between places
-
-## Environment Variables
-
-Required:
-- `DATABASE_URL` - PostgreSQL connection string
-
-Optional:
-- `PORT` - Server port (default: 8080)
-- `DEV_MODE` - Enable development mode (default: false)
-
-OAuth Configuration:
+OAuth Configuration, you'll need this in env if you arent bypassing auth with dev mode:
 - `GOOGLE_CLIENT_ID` - Google OAuth client ID
 - `GOOGLE_CLIENT_SECRET` - Google OAuth client secret
 - `GOOGLE_REDIRECT_URL` - Google OAuth redirect URL
 - `APPLE_CLIENT_ID` - Apple OAuth client ID
 - `APPLE_CLIENT_SECRET` - Apple OAuth client secret
 - `APPLE_REDIRECT_URL` - Apple OAuth redirect URL
-
-## Running the Server
-
-1. Set up PostgreSQL database
-2. Set `DATABASE_URL` environment variable
-3. Configure OAuth providers (optional for dev mode)
-4. Run migrations automatically on startup
-5. Start server: `go run cmd/server/main.go`
-
-The server will start on port 8080 by default (configurable via `PORT` environment variable).
-
-### Development Mode
-
-To run in development mode with authentication bypass:
-```bash
-DEV_MODE=true go run cmd/server/main.go
-```
-
-In dev mode, you can use the `X-Dev-User-ID` header to specify a user ID for requests.

@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/pin-app/pin/internal/middleware"
 	"github.com/pin-app/pin/internal/models"
 	"github.com/pin-app/pin/internal/repository"
 	"github.com/pin-app/pin/internal/server"
@@ -28,6 +29,7 @@ func NewFollowHandler(followRepo repository.FollowRepository, userRepo repositor
 
 func (h *FollowHandler) FollowUser(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
+	// Extract user ID from /api/users/{id}/follow
 	userIDStr := path[len("/api/users/") : len(path)-len("/follow")]
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
@@ -35,7 +37,12 @@ func (h *FollowHandler) FollowUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	currentUserID := uuid.New() // This should come from session
+	// Get current user from context (set by auth middleware)
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		server.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "User not authenticated"})
+		return
+	}
 
 	if currentUserID == userID {
 		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Cannot follow yourself"})
@@ -84,10 +91,32 @@ func (h *FollowHandler) UnfollowUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	currentUserID := uuid.New() // This should come from session
+	// Get current user from context (set by auth middleware)
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		server.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "User not authenticated"})
+		return
+	}
+
+	if currentUserID == userID {
+		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Cannot unfollow yourself"})
+		return
+	}
+
+	// Check if the follow relationship exists before trying to delete
+	exists, err := h.followRepo.IsFollowing(r.Context(), currentUserID, userID)
+	if err != nil {
+		server.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to check follow status"})
+		return
+	}
+
+	if !exists {
+		server.WriteJSON(w, http.StatusNotFound, map[string]string{"error": "Follow relationship not found"})
+		return
+	}
 
 	if err := h.followRepo.DeleteFollow(r.Context(), currentUserID, userID); err != nil {
-		server.WriteJSON(w, http.StatusNotFound, map[string]string{"error": "Follow relationship not found"})
+		server.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to unfollow user"})
 		return
 	}
 
@@ -197,7 +226,12 @@ func (h *FollowHandler) CheckFollowStatus(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	currentUserID := uuid.New() // This should come from session
+	// Get current user from context (set by auth middleware)
+	currentUserID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		server.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "User not authenticated"})
+		return
+	}
 
 	// Check if following
 	isFollowing, err := h.followRepo.IsFollowing(r.Context(), currentUserID, userID)

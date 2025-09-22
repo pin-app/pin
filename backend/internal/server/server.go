@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -78,6 +79,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	path := req.URL.Path
 	method := req.Method
 
+	// First try exact match
 	if routes, exists := r.routes[path]; exists {
 		if handler, exists := routes[method]; exists {
 			handler(w, req)
@@ -85,7 +87,52 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+	// Then try pattern matching for routes with parameters
+	for pattern, routes := range r.routes {
+		if r.matchesPattern(pattern, path) {
+			if handler, exists := routes[method]; exists {
+				handler(w, req)
+				return
+			}
+		}
+	}
+
 	http.NotFound(w, req)
+}
+
+func (r *Router) matchesPattern(pattern, path string) bool {
+	// Simple pattern matching for {id} parameters
+	// Convert pattern like "/api/users/{id}/stats" to regex-like matching
+	patternParts := strings.Split(pattern, "/")
+	pathParts := strings.Split(path, "/")
+
+	if len(patternParts) != len(pathParts) {
+		return false
+	}
+
+	for i, patternPart := range patternParts {
+		// Handle empty parts (leading/trailing slashes)
+		if patternPart == "" && pathParts[i] == "" {
+			continue
+		}
+		if patternPart == "" || pathParts[i] == "" {
+			return false
+		}
+		// Check if this is a parameter like {id}
+		if strings.HasPrefix(patternPart, "{") && strings.HasSuffix(patternPart, "}") {
+			// This is a parameter, match any non-empty string
+			if pathParts[i] == "" {
+				return false
+			}
+			continue
+		}
+		// Exact match for non-parameter parts
+		if patternPart != pathParts[i] {
+			return false
+		}
+	}
+
+	return true
 }
 
 func WriteJSON(w http.ResponseWriter, status int, data interface{}) {
@@ -166,26 +213,4 @@ type responseWriter struct {
 func (rw *responseWriter) WriteHeader(code int) {
 	rw.statusCode = code
 	rw.ResponseWriter.WriteHeader(code)
-}
-
-func (s *Server) StoreHealthCheck(remoteAddr, userAgent string) error {
-	if s.db == nil {
-		return nil
-	}
-
-	_, err := s.db.Exec(
-		"INSERT INTO health_checks (remote_addr, user_agent) VALUES ($1, $2)",
-		remoteAddr, userAgent,
-	)
-	return err
-}
-
-func (s *Server) GetHealthCheckCount() (int, error) {
-	if s.db == nil {
-		return 0, nil
-	}
-
-	var count int
-	err := s.db.QueryRow("SELECT COUNT(*) FROM health_checks").Scan(&count)
-	return count, err
 }

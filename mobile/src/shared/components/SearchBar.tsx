@@ -9,8 +9,8 @@ import {
   View,
   ViewStyle,
 } from "react-native";
-import { colors } from "../../theme/colors";
-import { typography } from "../../theme/typography";
+import { colors } from "@/theme/colors";
+import { typography } from "@/theme/typography";
 import OutsidePressHandler from "react-native-outside-press";
 
 interface SearchBarProps {
@@ -19,6 +19,8 @@ interface SearchBarProps {
   onInputChange: (text: string) => void;
   onSearchPress: () => void;
   onClear: () => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -28,9 +30,21 @@ export default function SearchBar({
   onInputChange,
   onSearchPress,
   onClear,
+  onFocus,
+  onBlur,
   style,
 }: SearchBarProps) {
   const [isInputFocused, setIsInputFocused] = useState(false);
+
+  const handleFocus = () => {
+    setIsInputFocused(true);
+    onFocus?.();
+  };
+
+  const handleBlur = () => {
+    setIsInputFocused(false);
+    onBlur?.();
+  };
 
   return (
     <OutsidePressHandler onOutsidePress={() => Keyboard.dismiss()}>
@@ -47,10 +61,13 @@ export default function SearchBar({
           value={value}
           onChangeText={onInputChange}
           style={styles.textInput}
-          onFocus={() => setIsInputFocused(true)}
-          onBlur={() => setIsInputFocused(false)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           onSubmitEditing={onSearchPress}
           returnKeyType="search"
+          autoComplete="off"
+          autoCorrect={false}
+          autoCapitalize="none"
         />
         {!!value && (
           <Pressable onPress={onClear}>
@@ -64,25 +81,23 @@ export default function SearchBar({
 
 const styles = StyleSheet.create({
   container: {
-    width: "100%",
-    display: "flex",
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    padding: 4,
-    paddingHorizontal: 8,
-    backgroundColor: "white",
-    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: colors.searchBackground,
     borderRadius: 8,
-    fontSize: typography.fontSize["2xl"],
-    color: colors.text,
+    marginHorizontal: 16,
+    marginBottom: 8,
   },
   containerFocused: {
-    outlineColor: "blue",
-    outlineWidth: 1,
+    backgroundColor: colors.searchBackground,
   },
   textInput: {
     flex: 1,
+    fontSize: typography.fontSize.base,
+    color: colors.text,
   },
   clearButton: {
     height: "auto",

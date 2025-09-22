@@ -1,14 +1,16 @@
 package main
 
 import (
-	"database/sql"
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
 
-	_ "github.com/lib/pq"
+	"github.com/pin-app/pin/internal/database"
 	"github.com/pin-app/pin/internal/handlers"
+	"github.com/pin-app/pin/internal/repository"
+	"github.com/pin-app/pin/internal/seed"
 	"github.com/pin-app/pin/internal/server"
 	"github.com/pin-app/pin/migrations"
 )
@@ -27,7 +29,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	var db *sql.DB
+	devMode := os.Getenv("DEV_MODE") == "true"
+	if devMode {
+		slog.Info("running in development mode - authentication bypassed for dev users")
+	}
+
+	var db *database.DB
 	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
 		slog.Info("running database migrations")
 		if err := migrations.Run(dbURL); err != nil {
@@ -37,7 +44,7 @@ func main() {
 		slog.Info("database migrations complete")
 
 		var err error
-		db, err = sql.Open("postgres", dbURL)
+		db, err = database.New(dbURL)
 		if err != nil {
 			slog.Error("failed to open database connection", "error", err)
 			os.Exit(1)
@@ -45,14 +52,45 @@ func main() {
 		defer db.Close()
 	}
 
+	if devMode && db == nil {
+		slog.Error("dev mode requires DATABASE_URL to be set for seeding dummy data")
+		os.Exit(1)
+	}
+
 	var srv *server.Server
 	if db != nil {
-		srv = server.NewWithDB(db)
+		srv = server.NewWithDB(db.GetConnection())
+
+		if devMode {
+			slog.Info("seeding development data")
+
+			userRepo := repository.NewUserRepository(db)
+			placeRepo := repository.NewPlaceRepository(db)
+			postRepo := repository.NewPostRepository(db)
+			commentRepo := repository.NewCommentRepository(db)
+			ratingRepo := repository.NewRatingRepository(db)
+			followRepo := repository.NewFollowRepository(db)
+
+			seeder := seed.NewSeeder(
+				userRepo,
+				placeRepo,
+				postRepo,
+				ratingRepo,
+				commentRepo,
+				followRepo,
+			)
+
+			if err := seeder.SeedDevData(context.Background()); err != nil {
+				slog.Error("failed to seed development data", "error", err)
+			} else {
+				slog.Info("development data seeded successfully")
+			}
+		}
 	} else {
 		srv = server.New()
 	}
 
-	handlers.RegisterRoutes(srv)
+	handlers.RegisterRoutes(srv, db)
 
 	slog.Info("server starting",
 		"port", port,

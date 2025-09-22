@@ -4,12 +4,15 @@ import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { colors, spacing, typography } from '@/theme';
 import { User } from '@/services/api';
 import { apiService } from '@/services/api';
+import Button from '@/shared/components/Button';
 
 interface UserProfileProps {
   user: User;
   currentUserId?: string;
   showFollowButton?: boolean;
   onFollowChange?: (isFollowing: boolean) => void;
+  onEditProfile?: () => void;
+  onShareProfile?: () => void;
   postsCount?: number;
   followingCount?: number;
   followersCount?: number;
@@ -20,6 +23,8 @@ export default function UserProfile({
   currentUserId,
   showFollowButton = true,
   onFollowChange,
+  onEditProfile,
+  onShareProfile,
   postsCount = 0,
   followingCount = 0,
   followersCount = 0,
@@ -71,7 +76,7 @@ export default function UserProfile({
 
   return (
     <View style={styles.container}>
-      <View style={styles.topSection}>
+      <View style={styles.avatarContainer}>
         <View style={styles.avatar}>
           {user.pfp_url ? (
             <Image source={{ uri: user.pfp_url }} style={styles.avatarImage} />
@@ -83,26 +88,47 @@ export default function UserProfile({
             </View>
           )}
         </View>
-        <View style={styles.nameAndStats}>
-          <View style={styles.nameSection}>
-            <Text style={styles.displayName}>{displayName}</Text>
-            {username && <Text style={styles.username}>{username}</Text>}
-            <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{postsCount}</Text>
-                <Text style={styles.statLabel}>posts</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{followingCount}</Text>
-                <Text style={styles.statLabel}>following</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{followersCount}</Text>
-                <Text style={styles.statLabel}>followers</Text>
-              </View>
+      </View>
+
+      <View style={styles.userInfoSection}>
+        <Text style={styles.displayName}>{displayName}</Text>
+
+        <View style={styles.usernameLocationRow}>
+          {username && <Text style={styles.username}>{username}</Text>}
+          {username && user.location && <Text style={styles.separator}>•</Text>}
+          {user.location && (
+            <View style={styles.locationContainer}>
+              <FontAwesome6 name="location-dot" size={12} color={colors.textTertiary} style={styles.locationIcon} />
+              <Text style={styles.location}>{user.location}</Text>
             </View>
-          </View>
-          {showFollowButton && !isOwnProfile && (
+          )}
+        </View>
+
+        <View style={styles.bioSection}>
+          {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
+        </View>
+
+        {/* buttons */}
+        <View style={styles.actionButtonsContainer}>
+          {isOwnProfile && (
+            <>
+              <Button 
+                title="Edit Profile" 
+                onPress={onEditProfile || (() => {})}
+                variant="secondary"
+                size="sm"
+                style={styles.actionButton}
+              />
+              <Button 
+                title="Share Profile" 
+                onPress={onShareProfile || (() => {})}
+                variant="secondary"
+                size="sm"
+                style={styles.actionButton}
+              />
+            </>
+          )}
+          {!isOwnProfile && showFollowButton && (
             <TouchableOpacity
               style={[styles.followButton, isFollowing && styles.followingButton]}
               onPress={handleFollowToggle}
@@ -114,15 +140,22 @@ export default function UserProfile({
             </TouchableOpacity>
           )}
         </View>
-      </View>
-      <View style={styles.bioSection}>
-        {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
-        {user.location && (
-          <View style={styles.locationContainer}>
-            <FontAwesome6 name="location-dot" size={12} color={colors.textTertiary} style={styles.locationIcon} />
-            <Text style={styles.location}>{user.location}</Text>
+
+        {/* stats */}
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{postsCount}</Text>
+            <Text style={styles.statLabel}>posts</Text>
           </View>
-        )}
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{followingCount}</Text>
+            <Text style={styles.statLabel}>following</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{followersCount}</Text>
+            <Text style={styles.statLabel}>followers</Text>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -134,18 +167,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
+    alignItems: 'center',
   },
-  topSection: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: spacing.md,
+  avatarContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
     backgroundColor: colors.border,
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: colors.border,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -165,36 +198,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarText: {
-    fontSize: 36,
+    fontSize: 48,
     fontWeight: typography.fontWeight.bold,
     color: colors.text,
   },
-  nameAndStats: {
-    flex: 1,
-    marginLeft: spacing.lg,
-    justifyContent: 'space-between',
-  },
-  nameSection: {
-    marginBottom: spacing.sm,
+  userInfoSection: {
+    width: '100%',
+    alignItems: 'center',
   },
   displayName: {
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
     color: colors.text,
-    marginBottom: 2,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+  },
+  usernameLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+    justifyContent: 'center',
   },
   username: {
     fontSize: typography.fontSize.base,
     color: colors.textSecondary,
   },
+  separator: {
+    fontSize: typography.fontSize.base,
+    color: colors.textSecondary,
+    marginHorizontal: spacing.sm,
+  },
   bioSection: {
-    marginTop: spacing.sm,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
   bio: {
     fontSize: typography.fontSize.base,
     color: colors.text,
     lineHeight: typography.lineHeight.normal * typography.fontSize.base,
-    marginBottom: spacing.sm,
+    textAlign: 'center',
   },
   locationContainer: {
     flexDirection: 'row',
@@ -204,17 +247,26 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   location: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography.fontSize.base,
     color: colors.textTertiary,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  actionButton: {
+    flex: 1,
   },
   followButton: {
     backgroundColor: colors.text,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: 20,
-    minWidth: 80,
+    minWidth: 100,
     alignItems: 'center',
-    alignSelf: 'flex-start',
   },
   followingButton: {
     backgroundColor: 'transparent',
@@ -231,11 +283,11 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
-    marginTop: spacing.sm,
-    gap: spacing.md,
+    gap: spacing.xl,
+    justifyContent: 'center',
   },
   statItem: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   statValue: {
     fontSize: typography.fontSize.lg,

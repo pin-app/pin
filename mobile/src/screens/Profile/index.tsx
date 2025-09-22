@@ -96,30 +96,12 @@ export default function ProfileScreen() {
           user={user} 
           currentUserId={user.id}
           showFollowButton={false}
+          onEditProfile={handleEditProfile}
+          onShareProfile={handleEditProfile}
           postsCount={postsCount}
           followingCount={followingCount}
           followersCount={followersCount}
         />
-        
-        <View style={styles.buttonRow}>
-          <Button 
-            title="Edit Profile" 
-            onPress={handleEditProfile}
-            variant="secondary"
-            size="sm"
-            style={styles.editButton}
-          />
-          <Button 
-            title="Share Profile" 
-            onPress={handleEditProfile}
-            variant="secondary"
-            size="sm"
-            style={styles.shareButton}
-          />
-          <TouchableOpacity style={styles.followButton} onPress={handleEditProfile}>
-            <FontAwesome6 name="user-plus" size={16} color={colors.text} />
-          </TouchableOpacity>
-        </View>
       </ScrollView>
 
       <DevModeSettings 
@@ -165,7 +147,8 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
     gap: spacing.sm,
   },
   editButton: {

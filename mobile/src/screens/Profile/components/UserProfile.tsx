@@ -129,15 +129,15 @@ export default function UserProfile({
             </>
           )}
           {!isOwnProfile && showFollowButton && (
-            <TouchableOpacity
-              style={[styles.followButton, isFollowing && styles.followingButton]}
+            // TODO: isFollowing isn't working right now
+            <Button
+              title={isFollowing ? 'Following' : 'Follow'}
               onPress={handleFollowToggle}
+              variant={isFollowing ? 'outline' : 'primary'}
+              size="sm"
               disabled={isLoading}
-            >
-              <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
-                {isFollowing ? 'Following' : 'Follow'}
-              </Text>
-            </TouchableOpacity>
+              style={styles.followButton}
+            />
           )}
         </View>
 
@@ -261,25 +261,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   followButton: {
-    backgroundColor: colors.text,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: 20,
     minWidth: 100,
-    alignItems: 'center',
-  },
-  followingButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  followButtonText: {
-    color: colors.background,
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.bold,
-  },
-  followingButtonText: {
-    color: colors.text,
   },
   statsRow: {
     flexDirection: 'row',

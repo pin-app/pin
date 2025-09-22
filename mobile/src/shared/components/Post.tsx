@@ -12,6 +12,7 @@ interface PostProps {
   onComment: (postId: string) => void;
   onRate: (postId: string) => void;
   onBookmark: (postId: string) => void;
+  onUserPress?: (userId: string, username?: string) => void;
   showCommentsButton?: boolean;
 }
 
@@ -23,6 +24,7 @@ export default function Post({
   onComment,
   onRate,
   onBookmark,
+  onUserPress,
   showCommentsButton = true,
 }: PostProps) {
   const getRatingColor = (rating: number) => {
@@ -46,7 +48,14 @@ export default function Post({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.avatar}>
+        <TouchableOpacity 
+          style={styles.avatar}
+          onPress={() => {
+            console.log('Avatar clicked, user ID:', post.user?.id, 'username:', post.user?.username);
+            onUserPress?.(post.user?.id || '', post.user?.username);
+          }}
+          disabled={!onUserPress || !post.user?.id}
+        >
           {post.user?.pfp_url ? (
             <Image source={{ uri: post.user.pfp_url }} style={styles.avatarImage} />
           ) : (
@@ -56,11 +65,22 @@ export default function Post({
               </Text>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
         <View style={styles.userDetails}>
-          <Text style={styles.userName}>
-            <Text style={styles.boldText}>{userName}</Text> ranked <Text style={styles.boldText}>{placeName}</Text>
-          </Text>
+          <View style={styles.userNameContainer}>
+            <TouchableOpacity 
+              onPress={() => {
+                console.log('Username clicked, user ID:', post.user?.id, 'username:', post.user?.username);
+                onUserPress?.(post.user?.id || '', post.user?.username);
+              }}
+              disabled={!onUserPress || !post.user?.id}
+            >
+              <Text style={[styles.userName, styles.boldText]}>{userName}</Text>
+            </TouchableOpacity>
+            <Text style={styles.userName}>
+              {' '}ranked <Text style={styles.boldText}>{placeName}</Text>
+            </Text>
+          </View>
           <Text style={styles.visitText}>{visits} visits • {dayOfWeek}</Text>
         </View>
         <View style={styles.ratingBadge}>
@@ -156,10 +176,14 @@ const styles = StyleSheet.create({
   userDetails: {
     flex: 1,
   },
+  userNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
   userName: {
     fontSize: typography.fontSize.base,
     color: colors.text,
-    marginBottom: 2,
   },
   boldText: {
     fontWeight: typography.fontWeight.bold,

@@ -25,6 +25,7 @@ type Comment struct {
 
 type Post struct {
 	Description string
+	PlaceName   string // Name of the place where this post was made
 	Images      []PostImage
 	Comments    []Comment
 	CreatedAt   time.Time
@@ -122,6 +123,7 @@ func (s *Seeder) getUserProfiles() []UserProfile {
 			Posts: []Post{
 				{
 					Description: "Ts calm, good place to live",
+					PlaceName:   "University House",
 					Images: []PostImage{
 						{
 							ImageURL:  "https://i.imgur.com/NyQRLkf.jpeg",
@@ -161,16 +163,12 @@ func (s *Seeder) getUserProfiles() []UserProfile {
 			Posts: []Post{
 				{
 					Description: "I love gt!",
+					PlaceName:   "Bobby-Dodd Stadium",
 					Images: []PostImage{
-						{
-							ImageURL:  "https://i.imgur.com/fn8taFG.jpeg",
-							Caption:   "block party",
-							SortOrder: 0,
-						},
 						{
 							ImageURL:  "https://i.imgur.com/seOZ2DC.jpeg",
 							Caption:   "nachos crushed these ong",
-							SortOrder: 1,
+							SortOrder: 0,
 						},
 					},
 					Comments: []Comment{
@@ -186,6 +184,70 @@ func (s *Seeder) getUserProfiles() []UserProfile {
 						},
 					},
 					CreatedAt: time.Now().Add(-3 * 24 * time.Hour),
+				},
+			},
+		},
+		{
+			Email:       "buzz@gmail.com",
+			Username:    "buzz",
+			DisplayName: "Buzz",
+			Bio:         "roll bees",
+			Location:    "behind you",
+			PfpURL:      "https://i.pinimg.com/736x/55/ae/fb/55aefb14f665cc1bb4b28298833f7cce.jpg",
+			CreatedAt:   time.Now().Add(-30 * 24 * time.Hour),
+			Posts: []Post{
+				{
+					Description: "Great game at the stadium!",
+					PlaceName:   "Bobby-Dodd Stadium",
+					Images: []PostImage{
+						{
+							ImageURL:  "https://cdn.prod.website-files.com/5fd923d0e6a54cf4a0c2acce/68b9d52524ebd85dba96122f_Georgia_Tech-MAIN_i.jpg",
+							Caption:   "amazing atmosphere",
+							SortOrder: 0,
+						},
+					},
+					Comments: []Comment{
+						{
+							Username: "raquentin",
+							Content:  "Go Jackets!",
+							Replies: []Comment{
+								{
+									Username: "buzz",
+									Content:  "Buzz buzz!",
+								},
+							},
+						},
+					},
+					CreatedAt: time.Now().Add(-2 * 24 * time.Hour),
+				},
+				{
+					Description: "Nice study spot at uhouse",
+					PlaceName:   "University House",
+					Images: []PostImage{
+						{
+							ImageURL:  "https://i.imgur.com/zGLrTIt.jpeg",
+							Caption:   "quiet and peaceful",
+							SortOrder: 0,
+						},
+						{
+							ImageURL:  "https://i.imgur.com/dJPSrp3.jpeg",
+							Caption:   "quiet and peaceful",
+							SortOrder: 0,
+						},
+					},
+					Comments: []Comment{
+						{
+							Username: "alice123",
+							Content:  "I should check this out",
+							Replies: []Comment{
+								{
+									Username: "buzz",
+									Content:  "Definitely recommend!",
+								},
+							},
+						},
+					},
+					CreatedAt: time.Now().Add(-1 * 24 * time.Hour),
 				},
 			},
 		},
@@ -216,6 +278,14 @@ func (s *Seeder) getFollowRelationships() []FollowRelationship {
 		{
 			FollowerUsername:  "alice123",
 			FollowingUsername: "raquentin",
+		},
+		{
+			FollowerUsername:  "raquentin",
+			FollowingUsername: "buzz",
+		},
+		{
+			FollowerUsername:  "alice123",
+			FollowingUsername: "buzz",
 		},
 	}
 }
@@ -280,12 +350,16 @@ func (s *Seeder) seedUserProfiles(ctx context.Context, userProfiles []UserProfil
 	for _, profile := range userProfiles {
 		user := usernameToUser[profile.Username]
 
+		// Create a map of place names to place IDs for easy lookup
+		placeNameToID := make(map[string]uuid.UUID)
+		for _, place := range places {
+			placeNameToID[place.Name] = place.ID
+		}
+
 		for _, postData := range profile.Posts {
-			var placeID uuid.UUID
-			if profile.Location == "uhouse" {
-				placeID = places[0].ID
-			} else {
-				placeID = places[1].ID
+			placeID, exists := placeNameToID[postData.PlaceName]
+			if !exists {
+				return nil, fmt.Errorf("place %s not found for post", postData.PlaceName)
 			}
 
 			post := &models.Post{

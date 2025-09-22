@@ -10,11 +10,13 @@ import {
   Alert,
   Image
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { colors, spacing, typography } from '@/theme';
 import { Post as PostType, Comment as CommentType } from '@/services/api';
 import { apiService } from '@/services/api';
 import Post from '@/shared/components/Post';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CommentsScreenProps {
   post: PostType;
@@ -22,6 +24,8 @@ interface CommentsScreenProps {
 }
 
 export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
+  const navigation = useNavigation();
+  const { user: currentUser } = useAuth();
   const [comments, setComments] = useState<CommentType[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -76,24 +80,46 @@ export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
     }
   };
 
+  const handleUserPress = (userId: string, username?: string) => {
+    // If it's the current user's own profile, navigate to Profile tab
+    if (currentUser && userId === currentUser.id) {
+      (navigation as any).navigate('Profile');
+    } else {
+      // Otherwise, navigate to OtherUserProfile
+      (navigation as any).navigate('OtherUserProfile', {
+        userId,
+        username,
+      });
+    }
+  };
+
   const renderComment = (comment: CommentType & { replies?: CommentType[] }, isReply = false) => {
     const timeAgo = new Date(comment.created_at).toLocaleDateString();
     
     return (
       <View key={comment.id} style={[styles.commentContainer, isReply && styles.replyContainer]}>
         <View style={styles.commentHeader}>
-          <View style={styles.commentAvatar}>
+          <TouchableOpacity 
+            style={styles.commentAvatar}
+            onPress={() => handleUserPress(comment.user?.id || '', comment.user?.username)}
+            disabled={!comment.user?.id}
+          >
             {comment.user?.pfp_url ? (
               <Image source={{ uri: comment.user.pfp_url }} style={styles.avatarImage} />
             ) : (
               <FontAwesome6 name="user" size={16} color={colors.textSecondary} />
             )}
-          </View>
+          </TouchableOpacity>
           <View style={styles.commentContent}>
             <View style={styles.commentUserInfo}>
-              <Text style={styles.commentUsername}>
-                {comment.user?.display_name || comment.user?.username || 'Unknown User'}
-              </Text>
+              <TouchableOpacity 
+                onPress={() => handleUserPress(comment.user?.id || '', comment.user?.username)}
+                disabled={!comment.user?.id}
+              >
+                <Text style={styles.commentUsername}>
+                  {comment.user?.display_name || comment.user?.username || 'Unknown User'}
+                </Text>
+              </TouchableOpacity>
               <Text style={styles.commentTime}>{timeAgo}</Text>
             </View>
             <Text style={styles.commentText}>{comment.content}</Text>
@@ -127,6 +153,7 @@ export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
             onComment={() => {}}
             onRate={() => {}}
             onBookmark={() => {}}
+            onUserPress={handleUserPress}
             showCommentsButton={false}
           />
         </View>

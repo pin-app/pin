@@ -3,7 +3,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Image } from 'react-native';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { colors, typography } from '@/theme';
-import { FeedScreen, MapScreen, ProfileScreen } from '@/screens';
+import { FeedScreen, MapScreen } from '@/screens';
+import ProfileStack from './ProfileStack';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Tab = createBottomTabNavigator();
@@ -60,8 +61,8 @@ export default function TabNavigator() {
         }}
       />
       <Tab.Screen 
-        name="Profile" 
-        component={ProfileScreen}
+        name="Profile"
+        component={ProfileStack}
         options={{
           headerShown: false,
           tabBarLabel: '',

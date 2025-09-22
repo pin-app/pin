@@ -8,16 +8,27 @@ import { spacing } from '@/theme/spacing';
 interface ProfileHeaderProps {
   username: string;
   onMenuPress: () => void;
+  showBackButton?: boolean;
 }
 
-export default function ProfileHeader({ username, onMenuPress }: ProfileHeaderProps) {
+export default function ProfileHeader({ username, onMenuPress, showBackButton = false }: ProfileHeaderProps) {
   return (
     <View style={styles.container}>
+      {showBackButton ? (
+        <TouchableOpacity onPress={onMenuPress} style={styles.backButton}>
+          <FontAwesome6 name="arrow-left" size={20} color={colors.iconDefault} />
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.placeholder} />
+      )}
+      
       <Text style={styles.username}>{username}</Text>
       
-      <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
-        <FontAwesome6 name="bars" size={20} color={colors.iconDefault} />
-      </TouchableOpacity>
+      {!showBackButton && (
+        <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
+          <FontAwesome6 name="bars" size={20} color={colors.iconDefault} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -36,8 +47,21 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize['2xl'],
     fontWeight: typography.fontWeight.bold,
     color: colors.text,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    zIndex: -1,
+  },
+  backButton: {
+    padding: spacing.xs,
+    zIndex: 1,
   },
   menuButton: {
     padding: spacing.xs,
+  },
+  placeholder: {
+    width: 32,
+    height: 32,
   },
 });

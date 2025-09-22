@@ -11,6 +11,7 @@ interface FeedProps {
   onComment: (postId: string) => void;
   onRate: (postId: string) => void;
   onBookmark: (postId: string) => void;
+  onUserPress?: (userId: string, username?: string) => void;
   onLoadMore?: () => void;
   refreshing?: boolean;
   onRefresh?: () => void;
@@ -22,6 +23,7 @@ export default function Feed({
   onComment,
   onRate,
   onBookmark,
+  onUserPress,
   onLoadMore,
   refreshing = false,
   onRefresh,
@@ -36,6 +38,7 @@ export default function Feed({
         onComment={onComment}
         onRate={onRate}
         onBookmark={onBookmark}
+        onUserPress={onUserPress}
       />
       {index < posts.length - 1 && <View style={styles.separator} />}
     </>

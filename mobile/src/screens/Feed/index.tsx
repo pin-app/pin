@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { colors } from '@/theme';
 import SearchBar from '@/components/SearchBar';
 import SearchResults from '@/components/SearchResults';
@@ -8,49 +9,8 @@ import Feed from './components/Feed';
 import CommentsScreen from '../Comments';
 import { apiService } from '@/services/api';
 import { Post, Place, User } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
 
-// TODO: merge the db tables pr and setup some type of dev mode data in the db by default so we
-// dont have to hardcode this
-const mockPosts = [
-  {
-    id: '1',
-    user: {
-      name: 'Pablo',
-      avatar: 'none'
-    },
-    location: 'Doraville',
-    visits: 3,
-    dayOfWeek: 'Sunday',
-    rating: 8.2,
-    text: 'Great for bigbacking, grocery. It\'s calm. LanZhou Ramen, El Rey Del Taco, Lees Bakery',
-    images: [
-      { id: '1', uri: '' },
-      { id: '2', uri: '' },
-      { id: '3', uri: '' },
-    ],
-    likes: 9,
-    isLiked: true,
-  },
-  {
-    id: '2',
-    user: {
-      name: 'Alain',
-      avatar: 'none'
-    },
-    location: 'Sandy Springs',
-    visits: 2,
-    dayOfWeek: 'Friday',
-    rating: 0.3,
-    text: 'Bro this place is 💩. Food is trash, nothing to do, streets are empty, boring asl',
-    images: [
-      { id: '1', uri: '' },
-      { id: '2', uri: '' },
-      { id: '3', uri: '' },
-    ],
-    likes: 2,
-    isLiked: false,
-  },
-];
 
 interface SearchResult {
   id: string;
@@ -62,6 +22,8 @@ interface SearchResult {
 }
 
 export default function HomeScreen() {
+  const navigation = useNavigation();
+  const { user: currentUser } = useAuth();
   const [searchValue, setSearchValue] = useState('');
   const [posts, setPosts] = useState<Post[]>([]);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -82,8 +44,6 @@ export default function HomeScreen() {
       setPosts(postsData);
     } catch (error) {
       console.error('Failed to load posts:', error);
-      // Fallback to mock data if API fails
-      setPosts(mockPosts as any);
     } finally {
       setIsLoading(false);
     }
@@ -108,6 +68,19 @@ export default function HomeScreen() {
 
   const handleBookmark = (postId: string) => {
     console.log('Bookmark post:', postId);
+  };
+
+  const handleUserPress = (userId: string, username?: string) => {
+    // If it's the current user's own profile, navigate to Profile tab
+    if (currentUser && userId === currentUser.id) {
+      (navigation as any).navigate('Profile');
+    } else {
+      // Otherwise, navigate to OtherUserProfile
+      (navigation as any).navigate('OtherUserProfile', {
+        userId,
+        username,
+      });
+    }
   };
 
   const handleMapPress = () => {
@@ -238,6 +211,7 @@ export default function HomeScreen() {
           onComment={handleComment}
           onRate={handleRate}
           onBookmark={handleBookmark}
+          onUserPress={handleUserPress}
         />
       )}
     </SafeAreaView>

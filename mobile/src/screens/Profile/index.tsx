@@ -11,10 +11,12 @@ import DebugInfo from './components/DebugInfo';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfileRefresh } from '@/contexts/ProfileRefreshContext';
 import { apiService } from '@/services/api';
+import SidebarMenu, { MenuItem } from './components/sideBarMenu';
 
 export default function ProfileScreen() {
   const { user, isDevMode } = useAuth();
   const { setRefreshFunction } = useProfileRefresh();
+  const [showMenu, setShowMenu] = useState(false);
   const [showDevSettings, setShowDevSettings] = useState(false);
   const [followingCount, setFollowingCount] = useState(0);
   const [followersCount, setFollowersCount] = useState(0);
@@ -79,8 +81,32 @@ export default function ProfileScreen() {
   };
 
   const handleMenuPress = () => {
-    setShowDevSettings(true);
+    setShowMenu(true);
   };
+  const onEditProfile = () => console.log('Edit profile');
+  const onShareProfile = () => console.log('Share profile');
+  const onSaved = () => console.log('Saved posts');
+  const onSettings = () => console.log('Settings');
+  const onLogout = () => console.log('Logout');
+
+  const sections = [
+    {
+      header: 'Profile',
+      items: [
+        { key: 'edit', label: 'Edit Profile', onPress: onEditProfile },
+        { key: 'share', label: 'Share Profile', onPress: onShareProfile },
+        { key: 'saved', label: 'Saved', subtitle: 'Your saved posts', onPress: onSaved },
+      ],
+    },
+    {
+      header: 'App',
+      items: [
+        { key: 'settings', label: 'Settings', onPress: onSettings },
+        { key: 'dev', label: 'Developer Settings', subtitle: isDevMode ? 'Dev Mode ON' : 'Dev Mode OFF', onPress: () => setShowDevSettings(true) },
+        { key: 'logout', label: 'Logout', destructive: true, onPress: onLogout },
+      ],
+    },
+  ];
 
   // Function to refresh stats (can be called from other screens)
   const refreshStats = useCallback(() => {
@@ -128,6 +154,8 @@ export default function ProfileScreen() {
         />
       </ScrollView>
 
+      <SidebarMenu visible={showMenu} onClose={() => setShowMenu(false)} title="Profile Menu" sections={sections} />
+        
       <DevModeSettings 
         visible={showDevSettings} 
         onClose={() => setShowDevSettings(false)} 

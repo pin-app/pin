@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, Text, SafeAreaView, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { colors, spacing } from '@/theme';
 import Button from '@/components/Button';
@@ -8,25 +9,22 @@ import ProfileHeader from './components/ProfileHeader';
 import DevModeSettings from './components/DevModeSettings';
 import DebugInfo from './components/DebugInfo';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfileRefresh } from '@/contexts/ProfileRefreshContext';
 import { apiService } from '@/services/api';
 import SidebarMenu, { MenuItem } from './components/sideBarMenu';
 
 export default function ProfileScreen() {
   const { user, isDevMode } = useAuth();
+  const { setRefreshFunction } = useProfileRefresh();
   const [showMenu, setShowMenu] = useState(false);
   const [showDevSettings, setShowDevSettings] = useState(false);
   const [followingCount, setFollowingCount] = useState(0);
   const [followersCount, setFollowersCount] = useState(0);
   const [postsCount, setPostsCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  useEffect(() => {
-    if (user) {
-      loadUserStats();
-    }
-  }, [user]);
-
-  const loadUserStats = async () => {
+  const loadUserStats = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -36,6 +34,7 @@ export default function ProfileScreen() {
         console.log('Loading user stats for:', user.id);
         const stats = await apiService.getUserStats(user.id);
         console.log('User stats loaded:', stats);
+        console.log('Previous following count:', followingCount, 'New following count:', stats.following_count);
         setPostsCount(stats.posts_count);
         setFollowingCount(stats.following_count);
         setFollowersCount(stats.followers_count);
@@ -61,7 +60,21 @@ export default function ProfileScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadUserStats();
+    }
+  }, [user, loadUserStats]);
+
+  // Reload stats when refreshTrigger changes
+  useEffect(() => {
+    if (user && refreshTrigger > 0) {
+      console.log('Refresh trigger activated, reloading stats...');
+      loadUserStats();
+    }
+  }, [refreshTrigger, user, loadUserStats]);
 
   const handleEditProfile = () => {
     console.log('Edit profile pressed');
@@ -94,6 +107,17 @@ export default function ProfileScreen() {
       ],
     },
   ];
+
+  // Function to refresh stats (can be called from other screens)
+  const refreshStats = useCallback(() => {
+    console.log('Manually refreshing stats...');
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
+
+  // Register the refresh function with the context
+  useEffect(() => {
+    setRefreshFunction(refreshStats);
+  }, [setRefreshFunction, refreshStats]);
 
 
   if (!user) {
@@ -153,6 +177,12 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.xl,
+  },
+  debugText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
   },
 
 

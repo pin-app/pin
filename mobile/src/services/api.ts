@@ -138,13 +138,33 @@ export class ApiService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        let errorData: any = {};
+        try {
+          const text = await response.text();
+          if (text) {
+            errorData = JSON.parse(text);
+          }
+        } catch {
+          // If parsing fails, use empty object
+        }
+        const error = new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        (error as any).status = response.status;
+        throw error;
       }
 
-      return await response.json();
+      // Handle empty responses (like 204 No Content)
+      const text = await response.text();
+      if (!text) {
+        return null as T;
+      }
+      
+      return JSON.parse(text);
     } catch (error) {
       if (error instanceof Error) {
+        // Preserve the original error with status code if it exists
+        if ((error as any).status) {
+          throw error;
+        }
         throw new Error(`API request failed: ${error.message}`);
       }
       throw new Error('API request failed: Unknown error');
@@ -211,13 +231,13 @@ export class ApiService {
 
   // Following endpoints
   async followUser(userId: string): Promise<void> {
-    await this.request(`/api/users/${userId}/follow`, {
+    await this.request<void>(`/api/users/${userId}/follow`, {
       method: 'POST',
     });
   }
 
   async unfollowUser(userId: string): Promise<void> {
-    await this.request(`/api/users/${userId}/follow`, {
+    await this.request<void>(`/api/users/${userId}/follow`, {
       method: 'DELETE',
     });
   }

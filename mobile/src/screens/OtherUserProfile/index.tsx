@@ -5,6 +5,7 @@ import { colors, spacing } from '@/theme';
 import UserProfile from '@/screens/Profile/components/UserProfile';
 import ProfileHeader from '@/screens/Profile/components/ProfileHeader';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfileRefresh } from '@/contexts/ProfileRefreshContext';
 import { apiService } from '@/services/api';
 
 interface OtherUserProfileScreenProps {
@@ -19,6 +20,7 @@ interface OtherUserProfileScreenProps {
 
 export default function OtherUserProfileScreen({ route, navigation }: OtherUserProfileScreenProps) {
   const { user: currentUser } = useAuth();
+  const { refreshProfile } = useProfileRefresh();
   const { userId, username } = route.params;
   const [otherUser, setOtherUser] = useState<any>(null);
   const [followingCount, setFollowingCount] = useState(0);
@@ -62,6 +64,8 @@ export default function OtherUserProfileScreen({ route, navigation }: OtherUserP
           setIsFollowing(following);
         } catch (error) {
           console.error('Failed to check follow status:', error);
+          // Default to not following if check fails
+          setIsFollowing(false);
         }
       }
       
@@ -75,24 +79,6 @@ export default function OtherUserProfileScreen({ route, navigation }: OtherUserP
     }
   };
 
-  const handleFollowToggle = async () => {
-    if (!currentUser || !otherUser) return;
-
-    try {
-      if (isFollowing) {
-        await apiService.unfollowUser(otherUser.id);
-        setIsFollowing(false);
-        setFollowersCount(prev => Math.max(0, prev - 1));
-      } else {
-        await apiService.followUser(otherUser.id);
-        setIsFollowing(true);
-        setFollowersCount(prev => prev + 1);
-      }
-    } catch (error) {
-      console.error('Failed to toggle follow:', error);
-      Alert.alert('Error', 'Failed to update follow status');
-    }
-  };
 
   const handleBack = () => {
     navigation.goBack();
@@ -141,6 +127,12 @@ export default function OtherUserProfileScreen({ route, navigation }: OtherUserP
           currentUserId={currentUser?.id}
           showFollowButton={true}
           onFollowChange={setIsFollowing}
+          onFollowAction={() => {
+            // Update follower count immediately
+            setFollowersCount(prev => isFollowing ? Math.max(0, prev - 1) : prev + 1);
+            // Refresh the current user's profile stats
+            refreshProfile();
+          }}
           postsCount={postsCount}
           followingCount={followingCount}
           followersCount={followersCount}

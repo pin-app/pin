@@ -13,6 +13,7 @@ interface UserProfileProps {
   onFollowChange?: (isFollowing: boolean) => void;
   onEditProfile?: () => void;
   onShareProfile?: () => void;
+  onFollowAction?: () => void;
   postsCount?: number;
   followingCount?: number;
   followersCount?: number;
@@ -25,6 +26,7 @@ export default function UserProfile({
   onFollowChange,
   onEditProfile,
   onShareProfile,
+  onFollowAction,
   postsCount = 0,
   followingCount = 0,
   followersCount = 0,
@@ -46,26 +48,41 @@ export default function UserProfile({
       setIsFollowing(following);
     } catch (error) {
       console.error('Failed to check follow status:', error);
+      // Default to not following if check fails
+      setIsFollowing(false);
     }
   };
 
   const handleFollowToggle = async () => {
     if (isLoading) return;
 
+    // optimistically update UI
+    const wasFollowing = isFollowing;
+    setIsFollowing(!wasFollowing);
+    onFollowChange?.(!wasFollowing);
+    
+    onFollowAction?.();
+
     try {
       setIsLoading(true);
-      if (isFollowing) {
+      if (wasFollowing) {
         await apiService.unfollowUser(user.id);
-        setIsFollowing(false);
-        onFollowChange?.(false);
       } else {
         await apiService.followUser(user.id);
-        setIsFollowing(true);
-        onFollowChange?.(true);
       }
     } catch (error) {
       console.error('Failed to toggle follow:', error);
-      Alert.alert('Error', 'Failed to update follow status');
+      
+      // revert the optimistic update on error
+      setIsFollowing(wasFollowing);
+      onFollowChange?.(wasFollowing);
+      
+      if (error instanceof Error && (error as any).status === 404) {
+        setIsFollowing(false);
+        onFollowChange?.(false);
+      } else {
+        Alert.alert('Error', 'Failed to update follow status');
+      }
     } finally {
       setIsLoading(false);
     }

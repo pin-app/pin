@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfileRefresh } from '@/contexts/ProfileRefreshContext';
 import { apiService } from '@/services/api';
 import SidebarMenu, { MenuItem } from './components/sideBarMenu';
+import { useNavigation } from '@react-navigation/native';
 
 export default function ProfileScreen() {
   const { user, isDevMode } = useAuth();
@@ -83,7 +84,12 @@ export default function ProfileScreen() {
   const handleMenuPress = () => {
     setShowMenu(true);
   };
-  const onEditProfile = () => console.log('Edit profile');
+
+  const navigation = useNavigation<any>();
+
+  const onEditProfile = () => {
+    navigation.navigate('EditProfile');
+  }
   const onShareProfile = () => console.log('Share profile');
   const onSaved = () => console.log('Saved posts');
   const onSettings = () => console.log('Settings');
@@ -146,7 +152,7 @@ export default function ProfileScreen() {
           user={user} 
           currentUserId={user.id}
           showFollowButton={false}
-          onEditProfile={handleEditProfile}
+          onEditProfile={onEditProfile}
           onShareProfile={handleEditProfile}
           postsCount={postsCount}
           followingCount={followingCount}

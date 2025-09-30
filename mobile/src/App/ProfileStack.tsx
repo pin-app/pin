@@ -16,7 +16,7 @@ export default function ProfileStack() {
     >
       <Stack.Screen name="ProfileMain" component={ProfileScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-      <Stack.Screen name="FollowList" component={FollowListScreen} />
+      <Stack.Screen name="Following" component={FollowListScreen} />
     </Stack.Navigator>
   );
 }

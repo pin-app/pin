@@ -4,6 +4,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { ListRenderItemInfo } from 'react-native';
 import { SearchBar } from '../../shared/components';
 import Feather from '@expo/vector-icons/Feather';
+import { useNavigation } from '@react-navigation/native';
+import { useRoute, RouteProp } from '@react-navigation/native';
+
+type FollowListRouteProp = RouteProp<{ params: { initialTab?: 'Followers' | 'Following' } }, 'params'>;
 
 // dummy data
 type User = {
@@ -34,9 +38,12 @@ const followingData: User[] = [
 ];
 
 export default function FollowListScreen() {
-  const [activeTab, setActiveTab] = useState('Followers');
   const [searchValue, setSearchValue] = useState('');
   const profileImagePlaceholder = 'holder'; 
+  const navigation = useNavigation<any>();
+  const route = useRoute<FollowListRouteProp>();
+  const intialTab = route.params?.initialTab || 'Following';
+  const [activeTab, setActiveTab] = useState<'Followers' | 'Following'>(intialTab);
   
   const renderItem = ({ item }: ListRenderItemInfo<User>) => (
     <View style={styles.listItem}>
@@ -62,7 +69,7 @@ export default function FollowListScreen() {
     <SafeAreaView style={styles.container}>
       {/* header */}
       <View style={styles.header}>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <Feather name="x" style={styles.headerIcon}/>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Friends</Text>
@@ -74,17 +81,17 @@ export default function FollowListScreen() {
       {/* follower following tabs */}
       <View style={styles.tabContainer}>
         <TouchableOpacity 
-          style={[styles.tab, activeTab === 'Followers' && styles.activeTab]} 
-          onPress={() => setActiveTab('Followers')}
-        >
-          <Text style={[styles.tabText, activeTab === 'Followers' && styles.activeTabText]}>Followers</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
           style={[styles.tab, activeTab === 'Following' && styles.activeTab]} 
           onPress={() => setActiveTab('Following')}
         >
           <Text style={[styles.tabText, activeTab === 'Following' && styles.activeTabText]}>Following</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === 'Followers' && styles.activeTab]} 
+          onPress={() => setActiveTab('Followers')}
+        >
+          <Text style={[styles.tabText, activeTab === 'Followers' && styles.activeTabText]}>Followers</Text>
         </TouchableOpacity>
       </View>
 

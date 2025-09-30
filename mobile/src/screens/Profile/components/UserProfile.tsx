@@ -17,6 +17,8 @@ interface UserProfileProps {
   postsCount?: number;
   followingCount?: number;
   followersCount?: number;
+  onFollowingPress?: () => void;
+  onFollowersPress?: () => void;
 }
 
 export default function UserProfile({
@@ -30,6 +32,8 @@ export default function UserProfile({
   postsCount = 0,
   followingCount = 0,
   followersCount = 0,
+  onFollowingPress,
+  onFollowersPress,
 }: UserProfileProps) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -164,14 +168,18 @@ export default function UserProfile({
             <Text style={styles.statValue}>{postsCount}</Text>
             <Text style={styles.statLabel}>posts</Text>
           </View>
-          <View style={styles.statItem}>
+          
+          {/* following */}
+          <TouchableOpacity onPress={onFollowingPress} style={styles.statItem} disabled={!onFollowingPress}>
             <Text style={styles.statValue}>{followingCount}</Text>
             <Text style={styles.statLabel}>following</Text>
-          </View>
-          <View style={styles.statItem}>
+          </TouchableOpacity>
+          
+          {/* followers */}
+          <TouchableOpacity onPress={onFollowersPress} style={styles.statItem} disabled={!onFollowersPress}>
             <Text style={styles.statValue}>{followersCount}</Text>
             <Text style={styles.statLabel}>followers</Text>
-          </View>
+          </TouchableOpacity>
         </View>
       </View>
     </View>

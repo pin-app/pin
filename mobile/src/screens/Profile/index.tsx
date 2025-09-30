@@ -90,6 +90,15 @@ export default function ProfileScreen() {
   const onEditProfile = () => {
     navigation.navigate('EditProfile');
   }
+
+  const onFollowingPress = () => {
+    navigation.navigate('Following');
+  }
+
+  const onFollowersPress = () => {
+  navigation.navigate('Following' , { initialTab: 'Followers' });
+}
+
   const onShareProfile = () => console.log('Share profile');
   const onSaved = () => console.log('Saved posts');
   const onSettings = () => console.log('Settings');
@@ -155,6 +164,8 @@ export default function ProfileScreen() {
           onEditProfile={onEditProfile}
           onShareProfile={handleEditProfile}
           postsCount={postsCount}
+          onFollowingPress={onFollowingPress}
+          onFollowersPress={onFollowersPress}
           followingCount={followingCount}
           followersCount={followersCount}
         />

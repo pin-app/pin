@@ -153,6 +153,31 @@ func (s *Seeder) getUserProfiles() []UserProfile {
 			},
 		},
 		{
+			Email:       "tracyxie05@gmail.com",
+			Username:    "tracyxie",
+			DisplayName: "Tracy",
+			Bio:         "beli enthusiast",
+			Location:    "new hampshire !!",
+			PfpURL:      "",
+			CreatedAt:   time.Now().Add(-30 * 24 * time.Hour),
+			Posts: []Post{
+				{
+					Description: "good food !",
+					PlaceName:   "Doraville",
+					Images: []PostImage{
+						{
+							ImageURL:  "",
+							Caption:   "best noodles in atl fs",
+							SortOrder: 0,
+						},
+					},
+					Comments: []Comment{
+					},
+					CreatedAt: time.Now().Add(-5 * 24 * time.Hour),
+				},
+			},
+		},
+		{
 			Email:       "alice@gmail.com",
 			Username:    "alice123",
 			DisplayName: "Alice",
@@ -286,6 +311,10 @@ func (s *Seeder) getFollowRelationships() []FollowRelationship {
 		{
 			FollowerUsername:  "alice123",
 			FollowingUsername: "buzz",
+		},
+		{
+			FollowerUsername:  "tracyxie",
+			FollowingUsername: "raquentin",
 		},
 	}
 }

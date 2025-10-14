@@ -2,6 +2,8 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ProfileScreen } from '@/screens';
+import EditProfileScreen from '@/screens/EditProfile';
+import FollowListScreen from '@/screens/Following';
 
 const Stack = createNativeStackNavigator();
 
@@ -13,6 +15,8 @@ export default function ProfileStack() {
       }}
     >
       <Stack.Screen name="ProfileMain" component={ProfileScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="Following" component={FollowListScreen} />
     </Stack.Navigator>
   );
 }

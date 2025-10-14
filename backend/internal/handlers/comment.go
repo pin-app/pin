@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/pin-app/pin/internal/middleware"
 	"github.com/pin-app/pin/internal/models"
 	"github.com/pin-app/pin/internal/repository"
 	"github.com/pin-app/pin/internal/server"
@@ -31,6 +32,13 @@ func NewCommentHandler(commentRepo repository.CommentRepository, postRepo reposi
 }
 
 func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user ID from context
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		server.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "User not authenticated"})
+		return
+	}
+
 	var req models.CommentCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
@@ -59,7 +67,7 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	comment := &models.Comment{
 		ID:        uuid.New(),
 		PostID:    req.PostID,
-		UserID:    uuid.New(),
+		UserID:    userID,
 		ParentID:  req.ParentID,
 		Content:   req.Content,
 		CreatedAt: time.Now(),

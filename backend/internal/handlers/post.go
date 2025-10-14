@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/pin-app/pin/internal/middleware"
 	"github.com/pin-app/pin/internal/models"
 	"github.com/pin-app/pin/internal/repository"
 	"github.com/pin-app/pin/internal/server"
@@ -31,6 +32,13 @@ func NewPostHandler(postRepo repository.PostRepository, placeRepo repository.Pla
 }
 
 func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user ID from context
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		server.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "User not authenticated"})
+		return
+	}
+
 	var req models.PostCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
@@ -50,7 +58,7 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 
 	post := &models.Post{
 		ID:          uuid.New(),
-		UserID:      uuid.New(), // TODO: Get from session/auth
+		UserID:      userID,
 		PlaceID:     req.PlaceID,
 		Description: req.Description,
 		CreatedAt:   time.Now(),

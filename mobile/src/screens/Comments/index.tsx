@@ -8,7 +8,8 @@ import {
   ScrollView, 
   TextInput,
   Alert,
-  Image
+  Image,
+  Keyboard
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
@@ -23,12 +24,18 @@ interface CommentsScreenProps {
   onBack: () => void;
 }
 
+type CommentWithReplies = CommentType & { 
+  replies: CommentWithReplies[];
+  isOptimistic?: boolean;
+};
+
 export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
   const navigation = useNavigation();
   const { user: currentUser } = useAuth();
-  const [comments, setComments] = useState<CommentType[]>([]);
+  const [comments, setComments] = useState<CommentWithReplies[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [replyingTo, setReplyingTo] = useState<CommentWithReplies | null>(null);
 
   useEffect(() => {
     loadComments();
@@ -39,8 +46,8 @@ export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
       setIsLoading(true);
       const commentsData = await apiService.getCommentsByPost(post.id);
       
-      const commentMap = new Map<string, CommentType & { replies: CommentType[] }>();
-      const rootComments: (CommentType & { replies: CommentType[] })[] = [];
+      const commentMap = new Map<string, CommentWithReplies>();
+      const rootComments: CommentWithReplies[] = [];
       
       commentsData.forEach(comment => {
         commentMap.set(comment.id, { ...comment, replies: [] });
@@ -68,16 +75,110 @@ export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
   };
 
   const handleAddComment = async () => {
-    if (!newComment.trim()) return;
+    if (!newComment.trim() || !currentUser) return;
+
+    const content = newComment.trim();
+    const parentId = replyingTo?.id;
+    
+    // Create optimistic comment
+    const optimisticComment: CommentWithReplies = {
+      id: `optimistic-${Date.now()}`,
+      post_id: post.id,
+      user_id: currentUser.id,
+      parent_id: parentId,
+      content: content,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      user: currentUser,
+      replies: [],
+      isOptimistic: true,
+    };
+
+    // Optimistically update UI
+    if (parentId && replyingTo) {
+      // Adding a reply
+      setComments(prev => {
+        const addReplyToComment = (comments: CommentWithReplies[]): CommentWithReplies[] => {
+          return comments.map(comment => {
+            if (comment.id === parentId) {
+              return {
+                ...comment,
+                replies: [...comment.replies, optimisticComment],
+              };
+            }
+            if (comment.replies.length > 0) {
+              return {
+                ...comment,
+                replies: addReplyToComment(comment.replies),
+              };
+            }
+            return comment;
+          });
+        };
+        return addReplyToComment(prev);
+      });
+    } else {
+      // Adding a root comment
+      setComments(prev => [optimisticComment, ...prev]);
+    }
+
+    // Clear input and reset reply state
+    setNewComment('');
+    setReplyingTo(null);
+    Keyboard.dismiss();
 
     try {
-      const newCommentData = await apiService.createComment(post.id, newComment.trim());
-      setComments(prev => [newCommentData, ...prev]);
-      setNewComment('');
+      // Make actual API call
+      const newCommentData = await apiService.createComment(post.id, content, parentId);
+      
+      // Replace optimistic comment with real one
+      setComments(prev => {
+        const replaceOptimistic = (comments: CommentWithReplies[]): CommentWithReplies[] => {
+          return comments.map(comment => {
+            if (comment.id === optimisticComment.id) {
+              return { ...newCommentData, replies: [] };
+            }
+            if (comment.replies.length > 0) {
+              return {
+                ...comment,
+                replies: replaceOptimistic(comment.replies),
+              };
+            }
+            return comment;
+          });
+        };
+        return replaceOptimistic(prev);
+      });
     } catch (error) {
       console.error('Failed to add comment:', error);
-      Alert.alert('Error', 'Failed to add comment');
+      
+      // Remove optimistic comment on error
+      setComments(prev => {
+        const removeOptimistic = (comments: CommentWithReplies[]): CommentWithReplies[] => {
+          return comments
+            .filter(comment => comment.id !== optimisticComment.id)
+            .map(comment => ({
+              ...comment,
+              replies: removeOptimistic(comment.replies),
+            }));
+        };
+        return removeOptimistic(prev);
+      });
+      
+      Alert.alert('Error', 'Failed to add comment. Please try again.');
+      // Restore the comment text so user can retry
+      setNewComment(content);
+      setReplyingTo(parentId ? replyingTo : null);
     }
+  };
+
+  const handleReply = (comment: CommentWithReplies) => {
+    setReplyingTo(comment);
+    // Focus is handled by the TextInput when replyingTo changes
+  };
+
+  const handleCancelReply = () => {
+    setReplyingTo(null);
   };
 
   const handleUserPress = (userId: string, username?: string) => {
@@ -93,7 +194,7 @@ export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
     }
   };
 
-  const renderComment = (comment: CommentType & { replies?: CommentType[] }, isReply = false) => {
+  const renderComment = (comment: CommentWithReplies, isReply = false) => {
     const timeAgo = new Date(comment.created_at).toLocaleDateString();
     
     return (
@@ -116,20 +217,33 @@ export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
                 onPress={() => handleUserPress(comment.user?.id || '', comment.user?.username)}
                 disabled={!comment.user?.id}
               >
-                <Text style={styles.commentUsername}>
+                <Text style={[
+                  styles.commentUsername,
+                  comment.isOptimistic && styles.optimisticText
+                ]}>
                   {comment.user?.display_name || comment.user?.username || 'Unknown User'}
                 </Text>
               </TouchableOpacity>
-              <Text style={styles.commentTime}>{timeAgo}</Text>
+              <Text style={styles.commentTime}>
+                {comment.isOptimistic ? 'Posting...' : timeAgo}
+              </Text>
             </View>
-            <Text style={styles.commentText}>{comment.content}</Text>
-            <TouchableOpacity style={styles.replyButton}>
+            <Text style={[
+              styles.commentText,
+              comment.isOptimistic && styles.optimisticText
+            ]}>
+              {comment.content}
+            </Text>
+            <TouchableOpacity 
+              style={styles.replyButton}
+              onPress={() => handleReply(comment)}
+            >
               <Text style={styles.replyButtonText}>Reply</Text>
             </TouchableOpacity>
           </View>
         </View>
         
-        {comment.replies && comment.replies.length > 0 && comment.replies.map(reply => renderComment(reply, true))}
+        {comment.replies && comment.replies.length > 0 && comment.replies.map((reply) => renderComment(reply as CommentWithReplies, true))}
       </View>
     );
   };
@@ -176,21 +290,33 @@ export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
 
       {/* Add Comment Input */}
       <View style={styles.addCommentContainer}>
-        <TextInput
-          style={styles.commentInput}
-          placeholder="Add a comment..."
-          placeholderTextColor={colors.textSecondary}
-          value={newComment}
-          onChangeText={setNewComment}
-          multiline
-        />
-        <TouchableOpacity 
-          style={[styles.sendButton, !newComment.trim() && styles.sendButtonDisabled]}
-          onPress={handleAddComment}
-          disabled={!newComment.trim()}
-        >
-          <FontAwesome6 name="paper-plane" size={16} color={newComment.trim() ? colors.text : colors.textSecondary} />
-        </TouchableOpacity>
+        {replyingTo && (
+          <View style={styles.replyingToBar}>
+            <Text style={styles.replyingToText}>
+              Replying to {replyingTo.user?.display_name || replyingTo.user?.username || 'Unknown User'}
+            </Text>
+            <TouchableOpacity onPress={handleCancelReply} style={styles.cancelReplyButton}>
+              <FontAwesome6 name="xmark" size={14} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        )}
+        <View style={styles.inputRow}>
+          <TextInput
+            style={styles.commentInput}
+            placeholder={replyingTo ? "Write a reply..." : "Add a comment..."}
+            placeholderTextColor={colors.textSecondary}
+            value={newComment}
+            onChangeText={setNewComment}
+            multiline
+          />
+          <TouchableOpacity 
+            style={[styles.sendButton, !newComment.trim() && styles.sendButtonDisabled]}
+            onPress={handleAddComment}
+            disabled={!newComment.trim()}
+          >
+            <FontAwesome6 name="paper-plane" size={16} color={newComment.trim() ? colors.text : colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -305,13 +431,32 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
   },
   addCommentContainer: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  replyingToBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+    backgroundColor: colors.border,
+  },
+  replyingToText: {
+    fontSize: typography.fontSize.xs,
+    color: colors.text,
+    fontWeight: typography.fontWeight.medium,
+  },
+  cancelReplyButton: {
+    padding: spacing.xs,
+  },
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.background,
   },
   commentInput: {
     flex: 1,
@@ -336,5 +481,8 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  optimisticText: {
+    opacity: 0.6,
   },
 });

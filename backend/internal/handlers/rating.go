@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/pin-app/pin/internal/middleware"
 	"github.com/pin-app/pin/internal/models"
 	"github.com/pin-app/pin/internal/repository"
 	"github.com/pin-app/pin/internal/server"
@@ -30,6 +31,13 @@ func NewRatingHandler(ratingRepo repository.RatingRepository, placeRepo reposito
 }
 
 func (h *RatingHandler) CreateRating(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user ID from context
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		server.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "User not authenticated"})
+		return
+	}
+
 	placeIDStr := r.URL.Path[len("/api/places/") : len("/api/places/")+36] // UUID length
 	placeID, err := uuid.Parse(placeIDStr)
 	if err != nil {
@@ -54,8 +62,6 @@ func (h *RatingHandler) CreateRating(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := uuid.New() // TODO: Get from session/auth
-
 	rating := &models.PlaceRating{
 		ID:        uuid.New(),
 		UserID:    userID,
@@ -74,14 +80,19 @@ func (h *RatingHandler) CreateRating(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RatingHandler) GetRating(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user ID from context
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		server.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "User not authenticated"})
+		return
+	}
+
 	placeIDStr := r.URL.Path[len("/api/places/") : len("/api/places/")+36] // UUID length
 	placeID, err := uuid.Parse(placeIDStr)
 	if err != nil {
 		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid place ID"})
 		return
 	}
-
-	userID := uuid.New() // TODO: Get from session/auth
 
 	rating, err := h.ratingRepo.GetRating(r.Context(), userID, placeID)
 	if err != nil {
@@ -93,6 +104,13 @@ func (h *RatingHandler) GetRating(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RatingHandler) UpdateRating(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user ID from context
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		server.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "User not authenticated"})
+		return
+	}
+
 	placeIDStr := r.URL.Path[len("/api/places/") : len("/api/places/")+36] // UUID length
 	placeID, err := uuid.Parse(placeIDStr)
 	if err != nil {
@@ -111,8 +129,6 @@ func (h *RatingHandler) UpdateRating(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := uuid.New() // TODO: Get from session/auth
-
 	rating := &models.PlaceRating{
 		UserID:    userID,
 		PlaceID:   placeID,
@@ -129,14 +145,19 @@ func (h *RatingHandler) UpdateRating(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RatingHandler) DeleteRating(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user ID from context
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		server.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "User not authenticated"})
+		return
+	}
+
 	placeIDStr := r.URL.Path[len("/api/places/") : len("/api/places/")+36] // UUID length
 	placeID, err := uuid.Parse(placeIDStr)
 	if err != nil {
 		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid place ID"})
 		return
 	}
-
-	userID := uuid.New() // TODO: Get from session/auth
 
 	if err := h.ratingRepo.DeleteRating(r.Context(), userID, placeID); err != nil {
 		server.WriteJSON(w, http.StatusNotFound, map[string]string{"error": "Rating not found"})
@@ -209,6 +230,13 @@ func (h *RatingHandler) GetAverageRating(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *RatingHandler) CreateComparison(w http.ResponseWriter, r *http.Request) {
+	// Get authenticated user ID from context
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		server.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "User not authenticated"})
+		return
+	}
+
 	var req models.PlaceComparisonRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
@@ -231,8 +259,6 @@ func (h *RatingHandler) CreateComparison(w http.ResponseWriter, r *http.Request)
 		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Worse place not found"})
 		return
 	}
-
-	userID := uuid.New() // TODO: Get from session/auth
 
 	comparison := &models.PlaceComparison{
 		ID:            uuid.New(),

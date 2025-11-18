@@ -16,18 +16,20 @@ import (
 )
 
 type CommentHandler struct {
-	commentRepo repository.CommentRepository
-	postRepo    repository.PostRepository
-	userRepo    repository.UserRepository
-	validator   *validator.Validate
+	commentRepo      repository.CommentRepository
+	postRepo         repository.PostRepository
+	userRepo         repository.UserRepository
+	notificationRepo repository.NotificationRepository
+	validator        *validator.Validate
 }
 
-func NewCommentHandler(commentRepo repository.CommentRepository, postRepo repository.PostRepository, userRepo repository.UserRepository) *CommentHandler {
+func NewCommentHandler(commentRepo repository.CommentRepository, postRepo repository.PostRepository, userRepo repository.UserRepository, notificationRepo repository.NotificationRepository) *CommentHandler {
 	return &CommentHandler{
-		commentRepo: commentRepo,
-		postRepo:    postRepo,
-		userRepo:    userRepo,
-		validator:   validator.New(),
+		commentRepo:      commentRepo,
+		postRepo:         postRepo,
+		userRepo:         userRepo,
+		notificationRepo: notificationRepo,
+		validator:        validator.New(),
 	}
 }
 
@@ -50,14 +52,15 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.postRepo.GetByID(r.Context(), req.PostID)
+	post, err := h.postRepo.GetByID(r.Context(), req.PostID)
 	if err != nil {
 		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Post not found"})
 		return
 	}
 
+	var parentComment *models.Comment
 	if req.ParentID != nil {
-		_, err := h.commentRepo.GetByID(r.Context(), *req.ParentID)
+		parentComment, err = h.commentRepo.GetByID(r.Context(), *req.ParentID)
 		if err != nil {
 			server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Parent comment not found"})
 			return
@@ -80,6 +83,8 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	commentResponse := h.buildCommentResponse(r.Context(), comment)
+
+	h.dispatchCommentNotifications(r.Context(), comment, post, parentComment)
 	server.WriteJSON(w, http.StatusCreated, commentResponse)
 }
 
@@ -304,4 +309,52 @@ func (h *CommentHandler) buildCommentResponse(ctx context.Context, comment *mode
 	}
 
 	return response
+}
+
+func (h *CommentHandler) dispatchCommentNotifications(ctx context.Context, comment *models.Comment, post *models.Post, parentComment *models.Comment) {
+	if h.notificationRepo == nil {
+		return
+	}
+
+	if post.UserID != comment.UserID {
+		data := map[string]string{
+			"post_id":    post.ID.String(),
+			"comment_id": comment.ID.String(),
+		}
+		h.createNotification(ctx, &models.Notification{
+			UserID:    post.UserID,
+			ActorID:   comment.UserID,
+			PostID:    &post.ID,
+			CommentID: &comment.ID,
+			Type:      models.NotificationTypeCommentPost,
+			Data:      data,
+		})
+	}
+
+	if parentComment != nil && parentComment.UserID != comment.UserID && parentComment.UserID != post.UserID {
+		data := map[string]string{
+			"post_id":           post.ID.String(),
+			"comment_id":        comment.ID.String(),
+			"parent_comment_id": parentComment.ID.String(),
+		}
+		h.createNotification(ctx, &models.Notification{
+			UserID:    parentComment.UserID,
+			ActorID:   comment.UserID,
+			PostID:    &post.ID,
+			CommentID: &comment.ID,
+			Type:      models.NotificationTypeCommentReply,
+			Data:      data,
+		})
+	}
+}
+
+func (h *CommentHandler) createNotification(ctx context.Context, notification *models.Notification) {
+	notification.ID = uuid.New()
+	if notification.Data == nil {
+		notification.Data = map[string]string{}
+	}
+	now := time.Now()
+	notification.CreatedAt = now
+	notification.UpdatedAt = now
+	_ = h.notificationRepo.Create(ctx, notification)
 }

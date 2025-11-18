@@ -20,6 +20,7 @@ func RegisterRoutes(srv *server.Server, db *database.DB, uploadDir string) {
 	sessionRepo := repository.NewSessionRepository(db)
 	followRepo := repository.NewFollowRepository(db)
 	likeRepo := repository.NewLikeRepository(db)
+	notificationRepo := repository.NewNotificationRepository(db)
 
 	// Initialize auth middleware
 	authMW := middleware.NewAuthMiddleware(sessionRepo, userRepo)
@@ -27,12 +28,13 @@ func RegisterRoutes(srv *server.Server, db *database.DB, uploadDir string) {
 	// Initialize handlers
 	userHandler := NewUserHandler(userRepo)
 	placeHandler := NewPlaceHandler(placeRepo)
-	postHandler := NewPostHandler(postRepo, placeRepo, userRepo, commentRepo, likeRepo)
-	commentHandler := NewCommentHandler(commentRepo, postRepo, userRepo)
+	postHandler := NewPostHandler(postRepo, placeRepo, userRepo, commentRepo, likeRepo, notificationRepo)
+	commentHandler := NewCommentHandler(commentRepo, postRepo, userRepo, notificationRepo)
 	uploadHandler := NewUploadHandler(uploadDir)
 	ratingHandler := NewRatingHandler(ratingRepo, placeRepo, userRepo)
 	oauthHandler := NewOAuthHandler(oauthRepo, userRepo, sessionRepo)
 	followHandler := NewFollowHandler(followRepo, userRepo)
+	notificationHandler := NewNotificationHandler(notificationRepo, userRepo)
 
 	// OAuth routes (public)
 	// Upload routes
@@ -88,6 +90,10 @@ func RegisterRoutes(srv *server.Server, db *database.DB, uploadDir string) {
 	router.HandleFunc("/api/comments/{id}/replies", "GET", authMW.OptionalAuth(commentHandler.GetCommentReplies))
 	router.HandleFunc("/api/posts/{id}/comments", "GET", authMW.OptionalAuth(commentHandler.ListCommentsByPost))
 	router.HandleFunc("/api/users/{id}/comments", "GET", authMW.OptionalAuth(commentHandler.ListCommentsByUser))
+
+	// Notification routes
+	router.HandleFunc("/api/notifications", "GET", authMW.RequireAuth(notificationHandler.ListNotifications))
+	router.HandleFunc("/api/notifications/clear", "POST", authMW.RequireAuth(notificationHandler.ClearNotifications))
 
 	// Rating routes
 	router.HandleFunc("/api/places/{id}/ratings", "POST", authMW.RequireAuth(ratingHandler.CreateRating))

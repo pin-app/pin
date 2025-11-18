@@ -60,6 +60,17 @@ export interface Post {
   liked_by_user: boolean;
 }
 
+export interface Notification {
+  id: string;
+  type: 'like_post' | 'comment_post' | 'comment_reply' | string;
+  post_id?: string;
+  comment_id?: string;
+  data: Record<string, string>;
+  created_at: string;
+  read_at?: string;
+  actor?: User;
+}
+
 export interface Place {
   id: string;
   name: string;
@@ -409,6 +420,22 @@ export class ApiService {
     });
     const response = await this.request<{posts: Post[]}>(`/api/places/${placeId}/posts?${params.toString()}`);
     return response.posts;
+  }
+
+  // Notification methods
+  async getNotifications(limit = 20, offset = 0): Promise<Notification[]> {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+    const response = await this.request<{notifications: Notification[]}>(`/api/notifications?${params.toString()}`);
+    return response.notifications;
+  }
+
+  async clearNotifications(): Promise<void> {
+    await this.request('/api/notifications/clear', {
+      method: 'POST',
+    });
   }
 
   // Comment methods

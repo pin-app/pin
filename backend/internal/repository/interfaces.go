@@ -105,6 +105,14 @@ type RatingRepository interface {
 	GetComparisonsByUserID(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.PlaceComparison, error)
 }
 
+// NotificationRepository defines the interface for notification operations
+type NotificationRepository interface {
+	Create(ctx context.Context, notification *models.Notification) error
+	ListByUserID(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.Notification, error)
+	ClearByUserID(ctx context.Context, userID uuid.UUID) error
+	SoftDeleteByReference(ctx context.Context, userID, actorID uuid.UUID, notifType models.NotificationType, postID *uuid.UUID, commentID *uuid.UUID) error
+}
+
 // LikeRepository defines the interface for post like operations
 type LikeRepository interface {
 	LikePost(ctx context.Context, postID, userID uuid.UUID) error

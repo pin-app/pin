@@ -18,12 +18,13 @@ import (
 )
 
 type PostHandler struct {
-	postRepo    repository.PostRepository
-	placeRepo   repository.PlaceRepository
-	userRepo    repository.UserRepository
-	commentRepo repository.CommentRepository
-	likeRepo    repository.LikeRepository
-	validator   *validator.Validate
+	postRepo         repository.PostRepository
+	placeRepo        repository.PlaceRepository
+	userRepo         repository.UserRepository
+	commentRepo      repository.CommentRepository
+	likeRepo         repository.LikeRepository
+	notificationRepo repository.NotificationRepository
+	validator        *validator.Validate
 }
 
 func NewPostHandler(
@@ -32,14 +33,16 @@ func NewPostHandler(
 	userRepo repository.UserRepository,
 	commentRepo repository.CommentRepository,
 	likeRepo repository.LikeRepository,
+	notificationRepo repository.NotificationRepository,
 ) *PostHandler {
 	return &PostHandler{
-		postRepo:    postRepo,
-		placeRepo:   placeRepo,
-		userRepo:    userRepo,
-		commentRepo: commentRepo,
-		likeRepo:    likeRepo,
-		validator:   validator.New(),
+		postRepo:         postRepo,
+		placeRepo:        placeRepo,
+		userRepo:         userRepo,
+		commentRepo:      commentRepo,
+		likeRepo:         likeRepo,
+		notificationRepo: notificationRepo,
+		validator:        validator.New(),
 	}
 }
 
@@ -378,7 +381,8 @@ func (h *PostHandler) LikePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := h.postRepo.GetByID(r.Context(), postID); err != nil {
+	post, err := h.postRepo.GetByID(r.Context(), postID)
+	if err != nil {
 		server.WriteJSON(w, http.StatusNotFound, map[string]string{"error": "Post not found"})
 		return
 	}
@@ -386,6 +390,20 @@ func (h *PostHandler) LikePost(w http.ResponseWriter, r *http.Request) {
 	if err := h.likeRepo.LikePost(r.Context(), postID, userID); err != nil {
 		server.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to like post"})
 		return
+	}
+
+	if post.UserID != userID && h.notificationRepo != nil {
+		data := map[string]string{
+			"post_id": post.ID.String(),
+		}
+		notification := &models.Notification{
+			UserID:  post.UserID,
+			ActorID: userID,
+			PostID:  &post.ID,
+			Type:    models.NotificationTypeLikePost,
+			Data:    data,
+		}
+		_ = h.createNotification(r.Context(), notification)
 	}
 
 	likes, _ := h.likeRepo.CountPostLikes(r.Context(), postID)
@@ -409,7 +427,8 @@ func (h *PostHandler) UnlikePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := h.postRepo.GetByID(r.Context(), postID); err != nil {
+	post, err := h.postRepo.GetByID(r.Context(), postID)
+	if err != nil {
 		server.WriteJSON(w, http.StatusNotFound, map[string]string{"error": "Post not found"})
 		return
 	}
@@ -417,6 +436,17 @@ func (h *PostHandler) UnlikePost(w http.ResponseWriter, r *http.Request) {
 	if err := h.likeRepo.UnlikePost(r.Context(), postID, userID); err != nil {
 		server.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to unlike post"})
 		return
+	}
+
+	if h.notificationRepo != nil && post.UserID != userID {
+		_ = h.notificationRepo.SoftDeleteByReference(
+			r.Context(),
+			post.UserID,
+			userID,
+			models.NotificationTypeLikePost,
+			&post.ID,
+			nil,
+		)
 	}
 
 	likes, _ := h.likeRepo.CountPostLikes(r.Context(), postID)
@@ -437,4 +467,21 @@ func (h *PostHandler) extractPostIDFromLikesPath(path string) (uuid.UUID, error)
 
 	idStr := strings.TrimSuffix(strings.TrimPrefix(path, prefix), suffix)
 	return uuid.Parse(idStr)
+}
+
+func (h *PostHandler) createNotification(ctx context.Context, notification *models.Notification) error {
+	if h.notificationRepo == nil {
+		return nil
+	}
+
+	notification.ID = uuid.New()
+	if notification.Data == nil {
+		notification.Data = map[string]string{}
+	}
+
+	now := time.Now()
+	notification.CreatedAt = now
+	notification.UpdatedAt = now
+
+	return h.notificationRepo.Create(ctx, notification)
 }

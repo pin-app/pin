@@ -7,6 +7,7 @@ import SearchResults from '@/components/SearchResults';
 import FeedHeader from './components/FeedHeader';
 import Feed from './components/Feed';
 import CommentsScreen from '../Comments';
+import NotificationsScreen from '../Notifications';
 import { apiService } from '@/services/api';
 import { Post, Place, User } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,6 +34,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showComments, setShowComments] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const hasFocusedOnce = useRef(false);
 
   const loadPosts = useCallback(async (options?: { useRefreshing?: boolean }) => {
@@ -127,11 +129,18 @@ export default function HomeScreen() {
   };
 
   const handleUserPress = (userId: string, username?: string) => {
-    // If it's the current user's own profile, navigate to Profile tab
     if (currentUser && userId === currentUser.id) {
       (navigation as any).navigate('Profile');
+      return;
+    }
+
+    const parentNav = navigation.getParent?.();
+    if (parentNav) {
+      parentNav.navigate('OtherUserProfile', {
+        userId,
+        username,
+      });
     } else {
-      // Otherwise, navigate to OtherUserProfile
       (navigation as any).navigate('OtherUserProfile', {
         userId,
         username,
@@ -141,10 +150,6 @@ export default function HomeScreen() {
 
   const handleMapPress = () => {
     console.log('Navigate to map');
-  };
-
-  const handleNotificationPress = () => {
-    console.log('Open notifications');
   };
 
   const handleSearchFocus = () => {
@@ -206,19 +211,18 @@ export default function HomeScreen() {
     resetSearch();
 
     if (result.type === 'member' && result.data) {
-      if (currentUser && result.data.id === currentUser.id) {
-        (navigation as any).navigate('Profile');
-      } else {
-        (navigation as any).navigate('OtherUserProfile', {
-          userId: result.data.id,
-          username: result.data.username,
-        });
-      }
+      handleUserPress(result.data.id, result.data.username);
     } else if (result.type === 'place' && result.data) {
-      (navigation as any).navigate('PlacePosts', {
+      const params = {
         placeId: result.data.id,
         placeName: result.data.name,
-      });
+      };
+      const parentNav = navigation.getParent?.();
+      if (parentNav) {
+        parentNav.navigate('PlacePosts', params);
+      } else {
+        (navigation as any).navigate('PlacePosts', params);
+      }
     }
   };
 
@@ -228,6 +232,31 @@ export default function HomeScreen() {
 
   const handleCloseSearch = () => {
     resetSearch();
+  };
+
+  const handleNotificationPress = () => {
+    resetSearch();
+    setShowNotifications(true);
+  };
+
+  const handleBackFromNotifications = () => {
+    setShowNotifications(false);
+  };
+
+  const handleOpenPostFromNotification = async (postId: string) => {
+    resetSearch();
+    setShowNotifications(false);
+    let post = posts.find((p) => p.id === postId);
+    if (!post) {
+      try {
+        post = await apiService.getPost(postId);
+      } catch (error) {
+        console.error('Failed to load post for notification:', error);
+        return;
+      }
+    }
+    setSelectedPost(post);
+    setShowComments(true);
   };
 
   const handleBackFromComments = () => {
@@ -240,6 +269,15 @@ export default function HomeScreen() {
       <CommentsScreen
         post={selectedPost}
         onBack={handleBackFromComments}
+      />
+    );
+  }
+
+  if (showNotifications) {
+    return (
+      <NotificationsScreen
+        onBack={handleBackFromNotifications}
+        onOpenPost={handleOpenPostFromNotification}
       />
     );
   }

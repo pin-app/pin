@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Image } from 'react-native';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { colors, typography } from '@/theme';
-import { FeedScreen, MapScreen } from '@/screens';
+import { FeedScreen, MapScreen, CreatePostScreen } from '@/screens';
 import ProfileStack from './ProfileStack';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -46,6 +46,17 @@ export default function TabNavigator() {
           tabBarLabel: '',
           tabBarIcon: ({ color, size }) => (
             <FontAwesome6 name="newspaper" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen 
+        name="CreatePost"
+        component={CreatePostScreen}
+        options={{
+          headerShown: false,
+          tabBarLabel: '',
+          tabBarIcon: ({ color, size }) => (
+            <FontAwesome6 name="plus" size={size * 0.85} color={color} />
           ),
         }}
       />

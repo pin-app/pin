@@ -7,7 +7,7 @@ import (
 	"github.com/pin-app/pin/internal/server"
 )
 
-func RegisterRoutes(srv *server.Server, db *database.DB) {
+func RegisterRoutes(srv *server.Server, db *database.DB, uploadDir string) {
 	router := srv.GetRouter()
 
 	// Initialize repositories
@@ -19,6 +19,7 @@ func RegisterRoutes(srv *server.Server, db *database.DB) {
 	oauthRepo := repository.NewOAuthRepository(db)
 	sessionRepo := repository.NewSessionRepository(db)
 	followRepo := repository.NewFollowRepository(db)
+	likeRepo := repository.NewLikeRepository(db)
 
 	// Initialize auth middleware
 	authMW := middleware.NewAuthMiddleware(sessionRepo, userRepo)
@@ -26,13 +27,17 @@ func RegisterRoutes(srv *server.Server, db *database.DB) {
 	// Initialize handlers
 	userHandler := NewUserHandler(userRepo)
 	placeHandler := NewPlaceHandler(placeRepo)
-	postHandler := NewPostHandler(postRepo, placeRepo, userRepo)
+	postHandler := NewPostHandler(postRepo, placeRepo, userRepo, commentRepo, likeRepo)
 	commentHandler := NewCommentHandler(commentRepo, postRepo, userRepo)
+	uploadHandler := NewUploadHandler(uploadDir)
 	ratingHandler := NewRatingHandler(ratingRepo, placeRepo, userRepo)
 	oauthHandler := NewOAuthHandler(oauthRepo, userRepo, sessionRepo)
 	followHandler := NewFollowHandler(followRepo, userRepo)
 
 	// OAuth routes (public)
+	// Upload routes
+	router.HandleFunc("/api/uploads", "POST", authMW.RequireAuth(uploadHandler.UploadImage))
+
 	router.HandleFunc("/api/auth/google", "GET", oauthHandler.GoogleAuth)
 	router.HandleFunc("/api/auth/google/callback", "GET", oauthHandler.GoogleCallback)
 	router.HandleFunc("/api/auth/apple", "GET", oauthHandler.AppleAuth)
@@ -70,6 +75,8 @@ func RegisterRoutes(srv *server.Server, db *database.DB) {
 	router.HandleFunc("/api/posts/{id}", "GET", authMW.OptionalAuth(postHandler.GetPost))
 	router.HandleFunc("/api/posts/{id}", "PUT", authMW.RequireAuth(postHandler.UpdatePost))
 	router.HandleFunc("/api/posts/{id}", "DELETE", authMW.RequireAuth(postHandler.DeletePost))
+	router.HandleFunc("/api/posts/{id}/likes", "POST", authMW.RequireAuth(postHandler.LikePost))
+	router.HandleFunc("/api/posts/{id}/likes", "DELETE", authMW.RequireAuth(postHandler.UnlikePost))
 	router.HandleFunc("/api/users/{id}/posts", "GET", authMW.OptionalAuth(postHandler.ListPostsByUser))
 	router.HandleFunc("/api/places/{id}/posts", "GET", authMW.OptionalAuth(postHandler.ListPostsByPlace))
 

@@ -55,6 +55,9 @@ export interface Post {
     created_at: string;
     updated_at: string;
   };
+  likes_count: number;
+  comments_count: number;
+  liked_by_user: boolean;
 }
 
 export interface Place {
@@ -106,10 +109,11 @@ export class ApiService {
     this.devUserId = userId;
   }
 
-  private getHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+  private getHeaders(contentType: string | null = 'application/json'): Record<string, string> {
+    const headers: Record<string, string> = {};
+    if (contentType) {
+      headers['Content-Type'] = contentType;
+    }
 
     if (this.isDevMode && this.devUserId) {
       headers['X-Dev-User-ID'] = this.devUserId;
@@ -300,6 +304,15 @@ export class ApiService {
     return this.request<Place[]>(`/api/places/search?${params.toString()}`);
   }
 
+  async listPlaces(limit = 20, offset = 0): Promise<Place[]> {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+    const response = await this.request<{places: Place[]}>(`/api/places?${params.toString()}`);
+    return response.places;
+  }
+
   async searchNearbyPlaces(
     lat: number,
     lng: number,
@@ -337,6 +350,42 @@ export class ApiService {
     return this.request<Post>('/api/posts', {
       method: 'POST',
       body: JSON.stringify(postData),
+    });
+  }
+
+  async uploadPostImage(uri: string, fileName?: string): Promise<{ url: string }> {
+    const name = fileName || uri.split('/').pop() || `upload-${Date.now()}.jpg`;
+    const formData = new FormData();
+    formData.append('file', {
+      uri,
+      name,
+      type: this.getMimeType(name),
+    } as any);
+
+    const headers = this.getHeaders(null);
+    const response = await fetch(`${this.baseUrl}/api/uploads`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || 'Failed to upload image');
+    }
+
+    return response.json();
+  }
+
+  async likePost(postId: string): Promise<{ post_id: string; likes_count: number; liked: boolean }> {
+    return this.request<{ post_id: string; likes_count: number; liked: boolean }>(`/api/posts/${postId}/likes`, {
+      method: 'POST',
+    });
+  }
+
+  async unlikePost(postId: string): Promise<{ post_id: string; likes_count: number; liked: boolean }> {
+    return this.request<{ post_id: string; likes_count: number; liked: boolean }>(`/api/posts/${postId}/likes`, {
+      method: 'DELETE',
     });
   }
 
@@ -397,6 +446,23 @@ export class ApiService {
     return this.request<void>(`/api/comments/${commentId}`, {
       method: 'DELETE',
     });
+  }
+
+  private getMimeType(fileName: string): string {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'png':
+        return 'image/png';
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'gif':
+        return 'image/gif';
+      case 'heic':
+        return 'image/heic';
+      default:
+        return 'application/octet-stream';
+    }
   }
 }
 

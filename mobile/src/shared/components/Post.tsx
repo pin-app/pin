@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { colors, spacing, typography } from '@/theme';
-import { Post as PostType } from '@/services/api';
+import { Post as PostType, API_BASE_URL } from '@/services/api';
 
 interface PostProps {
   post: PostType;
@@ -45,6 +45,12 @@ export default function Post({
   const rating = 8.2;
   const visits = 3;
 
+  const resolveImageUrl = (url?: string) => {
+    if (!url) return url;
+    if (url.startsWith('http')) return url;
+    return `${API_BASE_URL}${url}`;
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -57,7 +63,7 @@ export default function Post({
           disabled={!onUserPress || !post.user?.id}
         >
           {post.user?.pfp_url ? (
-            <Image source={{ uri: post.user.pfp_url }} style={styles.avatarImage} />
+            <Image source={{ uri: resolveImageUrl(post.user.pfp_url) }} style={styles.avatarImage} />
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Text style={styles.avatarText}>
@@ -98,7 +104,7 @@ export default function Post({
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesContainer}>
           {postImages.map((image) => (
             <View key={image.id} style={styles.postImage}>
-              <Image source={{ uri: image.image_url }} style={styles.postImageContent} />
+              <Image source={{ uri: resolveImageUrl(image.image_url) }} style={styles.postImageContent} />
             </View>
           ))}
         </ScrollView>

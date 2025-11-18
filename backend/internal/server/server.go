@@ -14,9 +14,11 @@ import (
 )
 
 type Server struct {
-	router *Router
-	logger *slog.Logger
-	db     *sql.DB
+	router        *Router
+	logger        *slog.Logger
+	db            *sql.DB
+	staticPrefix  string
+	staticHandler http.Handler
 }
 
 type Router struct {
@@ -61,11 +63,28 @@ func NewWithDB(db *sql.DB) *Server {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if s.staticHandler != nil && strings.HasPrefix(r.URL.Path, s.staticPrefix) {
+		s.staticHandler.ServeHTTP(w, r)
+		return
+	}
 	s.recoveryMiddleware(s.middleware(s.router)).ServeHTTP(w, r)
 }
 
 func (s *Server) GetRouter() *Router {
 	return s.router
+}
+
+func (s *Server) ServeStatic(prefix, dir string) {
+	if prefix == "" {
+		return
+	}
+
+	if !strings.HasSuffix(prefix, "/") {
+		prefix += "/"
+	}
+
+	s.staticPrefix = prefix
+	s.staticHandler = http.StripPrefix(prefix, http.FileServer(http.Dir(dir)))
 }
 
 func (r *Router) HandleFunc(pattern, method string, handler http.HandlerFunc) {

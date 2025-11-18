@@ -86,6 +86,7 @@ type CommentRepository interface {
 	ListByPostID(ctx context.Context, postID uuid.UUID, limit, offset int) ([]*models.Comment, error)
 	ListByUserID(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.Comment, error)
 	GetReplies(ctx context.Context, parentID uuid.UUID, limit, offset int) ([]*models.Comment, error)
+	CountByPostID(ctx context.Context, postID uuid.UUID) (int, error)
 }
 
 // RatingRepository defines the interface for rating-related database operations
@@ -102,4 +103,12 @@ type RatingRepository interface {
 	GetComparison(ctx context.Context, userID, betterPlaceID, worsePlaceID uuid.UUID) (*models.PlaceComparison, error)
 	DeleteComparison(ctx context.Context, userID, betterPlaceID, worsePlaceID uuid.UUID) error
 	GetComparisonsByUserID(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*models.PlaceComparison, error)
+}
+
+// LikeRepository defines the interface for post like operations
+type LikeRepository interface {
+	LikePost(ctx context.Context, postID, userID uuid.UUID) error
+	UnlikePost(ctx context.Context, postID, userID uuid.UUID) error
+	IsPostLikedByUser(ctx context.Context, postID, userID uuid.UUID) (bool, error)
+	CountPostLikes(ctx context.Context, postID uuid.UUID) (int, error)
 }

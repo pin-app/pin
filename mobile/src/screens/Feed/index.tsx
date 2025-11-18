@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, StyleSheet, SafeAreaView, Alert } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { colors } from '@/theme';
 import SearchBar from '@/components/SearchBar';
 import SearchResults from '@/components/SearchResults';
@@ -30,28 +30,84 @@ export default function HomeScreen() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showComments, setShowComments] = useState(false);
+  const hasFocusedOnce = useRef(false);
 
-  useEffect(() => {
-    loadPosts();
-  }, []);
-
-  const loadPosts = async () => {
+  const loadPosts = useCallback(async (options?: { useRefreshing?: boolean }) => {
     try {
-      setIsLoading(true);
+      if (options?.useRefreshing) {
+        setRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       const postsData = await apiService.getPosts(20, 0);
       setPosts(postsData);
     } catch (error) {
       console.error('Failed to load posts:', error);
     } finally {
-      setIsLoading(false);
+      if (options?.useRefreshing) {
+        setRefreshing(false);
+      } else {
+        setIsLoading(false);
+      }
     }
-  };
+  }, []);
 
-  const handleLike = (postId: string) => {
-    // TODO: Implement real like functionality with backend
-    console.log('Like post:', postId);
+  useEffect(() => {
+    loadPosts();
+  }, [loadPosts]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (hasFocusedOnce.current) {
+        loadPosts({ useRefreshing: true });
+      } else {
+        hasFocusedOnce.current = true;
+      }
+    }, [loadPosts])
+  );
+
+  const handleLike = async (postId: string) => {
+    if (!currentUser) {
+      Alert.alert('Sign in required', 'Log in to like posts.');
+      return;
+    }
+
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    const wasLiked = post.liked_by_user;
+    const previousState = { liked_by_user: post.liked_by_user, likes_count: post.likes_count };
+
+    setPosts(prev =>
+      prev.map(item => {
+        if (item.id !== postId) return item;
+        const delta = item.liked_by_user ? -1 : 1;
+        return {
+          ...item,
+          liked_by_user: !item.liked_by_user,
+          likes_count: Math.max(0, item.likes_count + delta),
+        };
+      })
+    );
+
+    try {
+      if (wasLiked) {
+        await apiService.unlikePost(postId);
+      } else {
+        await apiService.likePost(postId);
+      }
+    } catch (error) {
+      console.error('Failed to update like', error);
+      setPosts(prev =>
+        prev.map(item =>
+          item.id === postId ? { ...item, ...previousState } : item
+        )
+      );
+      Alert.alert('Error', 'Could not update like.');
+    }
   };
 
   const handleComment = (postId: string) => {
@@ -212,6 +268,8 @@ export default function HomeScreen() {
           onRate={handleRate}
           onBookmark={handleBookmark}
           onUserPress={handleUserPress}
+          refreshing={refreshing}
+          onRefresh={() => loadPosts({ useRefreshing: true })}
         />
       )}
     </SafeAreaView>

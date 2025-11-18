@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, Text, SafeAreaView, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, StyleSheet, Text, SafeAreaView, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { colors, spacing } from '@/theme';
@@ -10,9 +10,11 @@ import DevModeSettings from './components/DevModeSettings';
 import DebugInfo from './components/DebugInfo';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfileRefresh } from '@/contexts/ProfileRefreshContext';
-import { apiService } from '@/services/api';
+import { apiService, Post as PostType } from '@/services/api';
 import SidebarMenu, { MenuItem } from './components/sideBarMenu';
 import { useNavigation } from '@react-navigation/native';
+import PostCard from '@/components/Post';
+import CommentsScreen from '@/screens/Comments';
 
 export default function ProfileScreen() {
   const { user, isDevMode } = useAuth();
@@ -24,6 +26,10 @@ export default function ProfileScreen() {
   const [postsCount, setPostsCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [userPosts, setUserPosts] = useState<PostType[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<PostType | null>(null);
+  const [showComments, setShowComments] = useState(false);
 
   const loadUserStats = useCallback(async () => {
     if (!user) return;
@@ -66,8 +72,9 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (user) {
       loadUserStats();
+      loadUserPosts();
     }
-  }, [user, loadUserStats]);
+  }, [user, loadUserStats, loadUserPosts]);
 
   // Reload stats when refreshTrigger changes
   useEffect(() => {
@@ -76,6 +83,11 @@ export default function ProfileScreen() {
       loadUserStats();
     }
   }, [refreshTrigger, user, loadUserStats]);
+  useEffect(() => {
+    if (user && refreshTrigger > 0) {
+      loadUserPosts();
+    }
+  }, [refreshTrigger, user, loadUserPosts]);
 
   const handleEditProfile = () => {
     console.log('Edit profile pressed');
@@ -128,6 +140,99 @@ export default function ProfileScreen() {
     console.log('Manually refreshing stats...');
     setRefreshTrigger(prev => prev + 1);
   }, []);
+  const loadUserPosts = useCallback(async () => {
+    if (!user) return;
+    try {
+      setPostsLoading(true);
+      const postsData = await apiService.getPostsByUser(user.id, 20, 0);
+      setUserPosts(postsData);
+    } catch (error) {
+      console.error('Failed to load user posts:', error);
+      setUserPosts([]);
+    } finally {
+      setPostsLoading(false);
+    }
+  }, [user]);
+
+  const handleLikePost = async (postId: string) => {
+    const post = userPosts.find(p => p.id === postId);
+    if (!post) return;
+
+    const previousState = { liked_by_user: post.liked_by_user, likes_count: post.likes_count };
+
+    setUserPosts(prev =>
+      prev.map(item => {
+        if (item.id !== postId) return item;
+        const delta = item.liked_by_user ? -1 : 1;
+        return {
+          ...item,
+          liked_by_user: !item.liked_by_user,
+          likes_count: Math.max(0, item.likes_count + delta),
+        };
+      })
+    );
+
+    try {
+      if (previousState.liked_by_user) {
+        await apiService.unlikePost(postId);
+      } else {
+        await apiService.likePost(postId);
+      }
+    } catch (error) {
+      console.error('Failed to update like on profile feed:', error);
+      setUserPosts(prev =>
+        prev.map(item =>
+          item.id === postId ? { ...item, ...previousState } : item
+        )
+      );
+      Alert.alert('Error', 'Could not update like.');
+    }
+  };
+
+  const handleCommentPost = (postId: string) => {
+    const post = userPosts.find(p => p.id === postId);
+    if (post) {
+      setSelectedPost(post);
+      setShowComments(true);
+    }
+  };
+
+  const handleBackFromComments = () => {
+    setShowComments(false);
+    setSelectedPost(null);
+  };
+
+  const renderUserPosts = () => {
+    if (postsLoading) {
+      return <ActivityIndicator color={colors.textSecondary} style={styles.postsLoader} />;
+    }
+    if (userPosts.length === 0) {
+      return <Text style={styles.emptyPosts}>no posts yet</Text>;
+    }
+    return userPosts.map(post => (
+      <View key={post.id} style={styles.postSpacing}>
+        <PostCard
+          post={post}
+          likes={post.likes_count}
+          isLiked={post.liked_by_user}
+          onLike={() => handleLikePost(post.id)}
+          onComment={() => handleCommentPost(post.id)}
+          onRate={() => {}}
+          onBookmark={() => {}}
+          onUserPress={undefined}
+        />
+      </View>
+    ));
+  };
+
+  if (showComments && selectedPost) {
+    return (
+      <CommentsScreen
+        post={selectedPost}
+        onBack={handleBackFromComments}
+      />
+    );
+  }
 
   // Register the refresh function with the context
   useEffect(() => {
@@ -169,6 +274,9 @@ export default function ProfileScreen() {
           followingCount={followingCount}
           followersCount={followersCount}
         />
+        <View style={styles.postsSection}>
+          {renderUserPosts()}
+        </View>
       </ScrollView>
 
       <SidebarMenu visible={showMenu} onClose={() => setShowMenu(false)} title="Profile Menu" sections={sections} />
@@ -194,6 +302,18 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.xl,
+  },
+  postsSection: {
+    marginTop: spacing.lg,
+  },
+  postSpacing: {
+    marginBottom: spacing.lg,
+  },
+  emptyPosts: {
+    color: colors.textSecondary,
+  },
+  postsLoader: {
+    marginTop: spacing.sm,
   },
   debugText: {
     fontSize: 12,

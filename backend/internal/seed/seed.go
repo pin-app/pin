@@ -28,6 +28,7 @@ type Post struct {
 	PlaceName   string // Name of the place where this post was made
 	Images      []PostImage
 	Comments    []Comment
+	Likes       []string
 	CreatedAt   time.Time
 }
 
@@ -60,6 +61,7 @@ type Seeder struct {
 	ratingRepo  repository.RatingRepository
 	commentRepo repository.CommentRepository
 	followRepo  repository.FollowRepository
+	likeRepo    repository.LikeRepository
 }
 
 func NewSeeder(
@@ -69,6 +71,7 @@ func NewSeeder(
 	ratingRepo repository.RatingRepository,
 	commentRepo repository.CommentRepository,
 	followRepo repository.FollowRepository,
+	likeRepo repository.LikeRepository,
 ) *Seeder {
 	return &Seeder{
 		userRepo:    userRepo,
@@ -77,6 +80,7 @@ func NewSeeder(
 		ratingRepo:  ratingRepo,
 		commentRepo: commentRepo,
 		followRepo:  followRepo,
+		likeRepo:    likeRepo,
 	}
 }
 
@@ -122,7 +126,7 @@ func (s *Seeder) getUserProfiles() []UserProfile {
 			CreatedAt:   time.Now().Add(-30 * 24 * time.Hour),
 			Posts: []Post{
 				{
-					Description: "Ts calm, good place to live",
+					Description: "Calm, good place to live",
 					PlaceName:   "University House",
 					Images: []PostImage{
 						{
@@ -149,6 +153,7 @@ func (s *Seeder) getUserProfiles() []UserProfile {
 						},
 					},
 					CreatedAt: time.Now().Add(-5 * 24 * time.Hour),
+					Likes:     []string{"alice123", "buzz"},
 				},
 			},
 		},
@@ -172,8 +177,23 @@ func (s *Seeder) getUserProfiles() []UserProfile {
 						},
 					},
 					Comments: []Comment{
+						{
+							Username: "raquentin",
+							Content:  "which spot?",
+							Replies: []Comment{
+								{
+									Username: "tracyxie",
+									Content:  "the one by buford hwy",
+								},
+							},
+						},
+						{
+							Username: "alice123",
+							Content:  "need to try this",
+						},
 					},
 					CreatedAt: time.Now().Add(-5 * 24 * time.Hour),
+					Likes:     []string{"raquentin", "alice123"},
 				},
 			},
 		},
@@ -207,8 +227,17 @@ func (s *Seeder) getUserProfiles() []UserProfile {
 								},
 							},
 						},
+						{
+							Username: "buzz",
+							Content:  "those nachos hit different",
+						},
+						{
+							Username: "tracyxie",
+							Content:  "missed this one",
+						},
 					},
 					CreatedAt: time.Now().Add(-3 * 24 * time.Hour),
+					Likes:     []string{"buzz", "tracyxie"},
 				},
 			},
 		},
@@ -242,8 +271,13 @@ func (s *Seeder) getUserProfiles() []UserProfile {
 								},
 							},
 						},
+						{
+							Username: "tracyxie",
+							Content:  "wish i was there",
+						},
 					},
 					CreatedAt: time.Now().Add(-2 * 24 * time.Hour),
+					Likes:     []string{"raquentin", "alice123"},
 				},
 				{
 					Description: "Nice study spot at uhouse",
@@ -271,8 +305,13 @@ func (s *Seeder) getUserProfiles() []UserProfile {
 								},
 							},
 						},
+						{
+							Username: "raquentin",
+							Content:  "yeah it's solid",
+						},
 					},
 					CreatedAt: time.Now().Add(-1 * 24 * time.Hour),
+					Likes:     []string{"buzz"},
 				},
 			},
 		},
@@ -289,6 +328,11 @@ func (s *Seeder) getPlaceProfiles() []PlaceProfile {
 		{
 			Name:       "Bobby-Dodd Stadium",
 			Geometry:   "POINT(33.7725 -84.392778)",
+			Properties: map[string]any{},
+		},
+		{
+			Name:       "Doraville",
+			Geometry:   "POINT(33.8988 -84.2835)",
 			Properties: map[string]any{},
 		},
 	}
@@ -422,6 +466,16 @@ func (s *Seeder) seedUserProfiles(ctx context.Context, userProfiles []UserProfil
 			for _, commentData := range postData.Comments {
 				if err := s.createCommentWithReplies(ctx, post.ID, commentData, usernameToUser); err != nil {
 					return nil, fmt.Errorf("failed to create comment: %w", err)
+				}
+			}
+
+			for _, likerUsername := range postData.Likes {
+				liker, exists := usernameToUser[likerUsername]
+				if !exists {
+					continue
+				}
+				if err := s.likeRepo.LikePost(ctx, post.ID, liker.ID); err != nil {
+					return nil, fmt.Errorf("failed to seed like: %w", err)
 				}
 			}
 		}

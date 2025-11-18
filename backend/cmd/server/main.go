@@ -16,6 +16,14 @@ import (
 )
 
 func main() {
+	uploadDir := os.Getenv("UPLOAD_DIR")
+	if uploadDir == "" {
+		uploadDir = "uploads"
+	}
+	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
+		slog.Error("failed to prepare upload directory", "error", err)
+		os.Exit(1)
+	}
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -70,6 +78,7 @@ func main() {
 			commentRepo := repository.NewCommentRepository(db)
 			ratingRepo := repository.NewRatingRepository(db)
 			followRepo := repository.NewFollowRepository(db)
+			likeRepo := repository.NewLikeRepository(db)
 
 			seeder := seed.NewSeeder(
 				userRepo,
@@ -78,6 +87,7 @@ func main() {
 				ratingRepo,
 				commentRepo,
 				followRepo,
+				likeRepo,
 			)
 
 			if err := seeder.SeedDevData(context.Background()); err != nil {
@@ -90,7 +100,9 @@ func main() {
 		srv = server.New()
 	}
 
-	handlers.RegisterRoutes(srv, db)
+	srv.ServeStatic("/uploads/", uploadDir)
+
+	handlers.RegisterRoutes(srv, db, uploadDir)
 
 	slog.Info("server starting",
 		"port", port,

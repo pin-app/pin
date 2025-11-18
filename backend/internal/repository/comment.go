@@ -214,3 +214,18 @@ func (r *commentRepository) GetReplies(ctx context.Context, parentID uuid.UUID, 
 
 	return comments, nil
 }
+
+func (r *commentRepository) CountByPostID(ctx context.Context, postID uuid.UUID) (int, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM comments
+		WHERE post_id = $1 AND deleted_at IS NULL
+	`
+
+	var count int
+	if err := r.db.GetConnection().QueryRowContext(ctx, query, postID).Scan(&count); err != nil {
+		return 0, fmt.Errorf("failed to count comments: %w", err)
+	}
+
+	return count, nil
+}

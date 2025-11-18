@@ -27,6 +27,14 @@ type PostImage struct {
 	DeletedAt *time.Time `json:"deleted_at,omitempty" db:"deleted_at"`
 }
 
+type PostLike struct {
+	ID        uuid.UUID `json:"id" db:"id"`
+	PostID    uuid.UUID `json:"post_id" db:"post_id"`
+	UserID    uuid.UUID `json:"user_id" db:"user_id"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+}
+
 type Comment struct {
 	ID        uuid.UUID  `json:"id" db:"id"`
 	PostID    uuid.UUID  `json:"post_id" db:"post_id"`
@@ -43,7 +51,7 @@ type Comment struct {
 type PostCreateRequest struct {
 	PlaceID     uuid.UUID `json:"place_id" validate:"required"`
 	Description *string   `json:"description,omitempty" validate:"omitempty,max=2000"`
-	Images      []string  `json:"images,omitempty" validate:"omitempty,dive,url"`
+	Images      []string  `json:"images,omitempty" validate:"omitempty,dive,required"`
 }
 
 // PostUpdateRequest represents the data that can be updated for a post
@@ -53,15 +61,18 @@ type PostUpdateRequest struct {
 
 // PostResponse represents the post data returned in API responses
 type PostResponse struct {
-	ID          uuid.UUID      `json:"id"`
-	UserID      uuid.UUID      `json:"user_id"`
-	PlaceID     uuid.UUID      `json:"place_id"`
-	Description *string        `json:"description,omitempty"`
-	Images      []PostImage    `json:"images,omitempty"`
-	Place       *PlaceResponse `json:"place,omitempty"`
-	User        *UserResponse  `json:"user,omitempty"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
+	ID            uuid.UUID      `json:"id"`
+	UserID        uuid.UUID      `json:"user_id"`
+	PlaceID       uuid.UUID      `json:"place_id"`
+	Description   *string        `json:"description,omitempty"`
+	Images        []PostImage    `json:"images,omitempty"`
+	Place         *PlaceResponse `json:"place,omitempty"`
+	User          *UserResponse  `json:"user,omitempty"`
+	LikesCount    int            `json:"likes_count"`
+	CommentsCount int            `json:"comments_count"`
+	LikedByUser   bool           `json:"liked_by_user"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
 }
 
 // ToResponse converts a Post to PostResponse

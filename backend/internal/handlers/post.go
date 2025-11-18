@@ -3,8 +3,10 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -16,18 +18,28 @@ import (
 )
 
 type PostHandler struct {
-	postRepo  repository.PostRepository
-	placeRepo repository.PlaceRepository
-	userRepo  repository.UserRepository
-	validator *validator.Validate
+	postRepo    repository.PostRepository
+	placeRepo   repository.PlaceRepository
+	userRepo    repository.UserRepository
+	commentRepo repository.CommentRepository
+	likeRepo    repository.LikeRepository
+	validator   *validator.Validate
 }
 
-func NewPostHandler(postRepo repository.PostRepository, placeRepo repository.PlaceRepository, userRepo repository.UserRepository) *PostHandler {
+func NewPostHandler(
+	postRepo repository.PostRepository,
+	placeRepo repository.PlaceRepository,
+	userRepo repository.UserRepository,
+	commentRepo repository.CommentRepository,
+	likeRepo repository.LikeRepository,
+) *PostHandler {
 	return &PostHandler{
-		postRepo:  postRepo,
-		placeRepo: placeRepo,
-		userRepo:  userRepo,
-		validator: validator.New(),
+		postRepo:    postRepo,
+		placeRepo:   placeRepo,
+		userRepo:    userRepo,
+		commentRepo: commentRepo,
+		likeRepo:    likeRepo,
+		validator:   validator.New(),
 	}
 }
 
@@ -191,7 +203,8 @@ func (h *PostHandler) ListPosts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	posts, err := h.postRepo.ListFeed(r.Context(), uuid.New(), limit, offset) // TODO: Get user ID from session
+	userID, _ := middleware.GetUserIDFromContext(r.Context())
+	posts, err := h.postRepo.ListFeed(r.Context(), userID, limit, offset)
 	if err != nil {
 		server.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to list posts"})
 		return
@@ -331,5 +344,97 @@ func (h *PostHandler) buildPostResponse(ctx context.Context, post *models.Post) 
 		response.User = &userResponse
 	}
 
+	// Get engagement data
+	if h.likeRepo != nil {
+		if likes, err := h.likeRepo.CountPostLikes(ctx, post.ID); err == nil {
+			response.LikesCount = likes
+		}
+		if userID, ok := middleware.GetUserIDFromContext(ctx); ok && userID != uuid.Nil {
+			if liked, err := h.likeRepo.IsPostLikedByUser(ctx, post.ID, userID); err == nil {
+				response.LikedByUser = liked
+			}
+		}
+	}
+
+	if h.commentRepo != nil {
+		if comments, err := h.commentRepo.CountByPostID(ctx, post.ID); err == nil {
+			response.CommentsCount = comments
+		}
+	}
+
 	return response
+}
+
+func (h *PostHandler) LikePost(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		server.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "User not authenticated"})
+		return
+	}
+
+	postID, err := h.extractPostIDFromLikesPath(r.URL.Path)
+	if err != nil {
+		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid post ID"})
+		return
+	}
+
+	if _, err := h.postRepo.GetByID(r.Context(), postID); err != nil {
+		server.WriteJSON(w, http.StatusNotFound, map[string]string{"error": "Post not found"})
+		return
+	}
+
+	if err := h.likeRepo.LikePost(r.Context(), postID, userID); err != nil {
+		server.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to like post"})
+		return
+	}
+
+	likes, _ := h.likeRepo.CountPostLikes(r.Context(), postID)
+	server.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"post_id":     postID,
+		"likes_count": likes,
+		"liked":       true,
+	})
+}
+
+func (h *PostHandler) UnlikePost(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserIDFromContext(r.Context())
+	if !ok {
+		server.WriteJSON(w, http.StatusUnauthorized, map[string]string{"error": "User not authenticated"})
+		return
+	}
+
+	postID, err := h.extractPostIDFromLikesPath(r.URL.Path)
+	if err != nil {
+		server.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid post ID"})
+		return
+	}
+
+	if _, err := h.postRepo.GetByID(r.Context(), postID); err != nil {
+		server.WriteJSON(w, http.StatusNotFound, map[string]string{"error": "Post not found"})
+		return
+	}
+
+	if err := h.likeRepo.UnlikePost(r.Context(), postID, userID); err != nil {
+		server.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to unlike post"})
+		return
+	}
+
+	likes, _ := h.likeRepo.CountPostLikes(r.Context(), postID)
+	server.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"post_id":     postID,
+		"likes_count": likes,
+		"liked":       false,
+	})
+}
+
+func (h *PostHandler) extractPostIDFromLikesPath(path string) (uuid.UUID, error) {
+	const prefix = "/api/posts/"
+	const suffix = "/likes"
+
+	if !strings.HasPrefix(path, prefix) || !strings.HasSuffix(path, suffix) {
+		return uuid.Nil, fmt.Errorf("invalid likes path")
+	}
+
+	idStr := strings.TrimSuffix(strings.TrimPrefix(path, prefix), suffix)
+	return uuid.Parse(idStr)
 }

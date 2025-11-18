@@ -32,8 +32,8 @@ export default function Feed({
     <>
       <Post
         post={item}
-        likes={0} // TODO: Add real likes from backend
-        isLiked={false} // TODO: Add real like status from backend
+        likes={item.likes_count}
+        isLiked={item.liked_by_user}
         onLike={onLike}
         onComment={onComment}
         onRate={onRate}

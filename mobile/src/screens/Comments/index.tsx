@@ -14,7 +14,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { colors, spacing, typography } from '@/theme';
-import { Post as PostType, Comment as CommentType } from '@/services/api';
+import { Post as PostType, Comment as CommentType, API_BASE_URL } from '@/services/api';
 import { apiService } from '@/services/api';
 import Post from '@/shared/components/Post';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,6 +36,16 @@ export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [replyingTo, setReplyingTo] = useState<CommentWithReplies | null>(null);
+  const [postState, setPostState] = useState<PostType>(post);
+  const resolveImageUrl = (url?: string) => {
+    if (!url) return undefined;
+    if (url.startsWith('http')) return url;
+    return `${API_BASE_URL}${url}`;
+  };
+
+  useEffect(() => {
+    setPostState(post);
+  }, [post]);
 
   useEffect(() => {
     loadComments();
@@ -130,6 +140,7 @@ export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
     try {
       // Make actual API call
       const newCommentData = await apiService.createComment(post.id, content, parentId);
+      setPostState(prev => ({ ...prev, comments_count: prev.comments_count + 1 }));
       
       // Replace optimistic comment with real one
       setComments(prev => {
@@ -177,6 +188,32 @@ export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
     // Focus is handled by the TextInput when replyingTo changes
   };
 
+  const handleLikePost = async () => {
+    if (!currentUser) {
+      Alert.alert('Sign in required', 'Log in to like posts.');
+      return;
+    }
+
+    const snapshot = { ...postState };
+    setPostState(prev => ({
+      ...prev,
+      liked_by_user: !prev.liked_by_user,
+      likes_count: Math.max(0, prev.likes_count + (prev.liked_by_user ? -1 : 1)),
+    }));
+
+    try {
+      if (snapshot.liked_by_user) {
+        await apiService.unlikePost(snapshot.id);
+      } else {
+        await apiService.likePost(snapshot.id);
+      }
+    } catch (error) {
+      console.error('Failed to update like from comments', error);
+      setPostState(snapshot);
+      Alert.alert('Error', 'Could not update like.');
+    }
+  };
+
   const handleCancelReply = () => {
     setReplyingTo(null);
   };
@@ -206,7 +243,7 @@ export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
             disabled={!comment.user?.id}
           >
             {comment.user?.pfp_url ? (
-              <Image source={{ uri: comment.user.pfp_url }} style={styles.avatarImage} />
+            <Image source={{ uri: resolveImageUrl(comment.user.pfp_url) }} style={styles.avatarImage} />
             ) : (
               <FontAwesome6 name="user" size={16} color={colors.textSecondary} />
             )}
@@ -260,10 +297,10 @@ export default function CommentsScreen({ post, onBack }: CommentsScreenProps) {
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.postContainer}>
           <Post
-            post={post}
-            likes={0}
-            isLiked={false}
-            onLike={() => {}}
+            post={postState}
+            likes={postState.likes_count}
+            isLiked={postState.liked_by_user}
+            onLike={() => handleLikePost()}
             onComment={() => {}}
             onRate={() => {}}
             onBookmark={() => {}}

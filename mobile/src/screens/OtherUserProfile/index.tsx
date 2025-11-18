@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text, SafeAreaView, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, StyleSheet, Text, SafeAreaView, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { colors, spacing } from '@/theme';
 import UserProfile from '@/screens/Profile/components/UserProfile';
 import ProfileHeader from '@/screens/Profile/components/ProfileHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfileRefresh } from '@/contexts/ProfileRefreshContext';
-import { apiService } from '@/services/api';
+import { apiService, Post as PostType } from '@/services/api';
+import PostCard from '@/components/Post';
+import CommentsScreen from '@/screens/Comments';
 
 interface OtherUserProfileScreenProps {
   route: {
@@ -28,6 +30,10 @@ export default function OtherUserProfileScreen({ route, navigation }: OtherUserP
   const [postsCount, setPostsCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [userPosts, setUserPosts] = useState<PostType[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<PostType | null>(null);
 
   useEffect(() => {
     loadUserProfile();
@@ -56,6 +62,8 @@ export default function OtherUserProfileScreen({ route, navigation }: OtherUserP
         setFollowingCount(0);
         setFollowersCount(0);
       }
+
+      await loadPostsForUser(userId);
       
       // Check if current user is following this user
       if (currentUser) {
@@ -78,6 +86,103 @@ export default function OtherUserProfileScreen({ route, navigation }: OtherUserP
       setIsLoading(false);
     }
   };
+  const loadPostsForUser = useCallback(async (id: string) => {
+    try {
+      setPostsLoading(true);
+      const posts = await apiService.getPostsByUser(id, 20, 0);
+      setUserPosts(posts);
+    } catch (error) {
+      console.error('Failed to load user posts:', error);
+      setUserPosts([]);
+    } finally {
+      setPostsLoading(false);
+    }
+  }, []);
+
+  const handleLikePost = async (postId: string) => {
+    const post = userPosts.find(p => p.id === postId);
+    if (!post) return;
+
+    const previousState = { liked_by_user: post.liked_by_user, likes_count: post.likes_count };
+
+    setUserPosts(prev =>
+      prev.map(item => {
+        if (item.id !== postId) return item;
+        const delta = item.liked_by_user ? -1 : 1;
+        return {
+          ...item,
+          liked_by_user: !item.liked_by_user,
+          likes_count: Math.max(0, item.likes_count + delta),
+        };
+      })
+    );
+
+    try {
+      if (previousState.liked_by_user) {
+        await apiService.unlikePost(postId);
+      } else {
+        await apiService.likePost(postId);
+      }
+    } catch (error) {
+      console.error('Failed to update like on other profile:', error);
+      setUserPosts(prev =>
+        prev.map(item =>
+          item.id === postId ? { ...item, ...previousState } : item
+        )
+      );
+      Alert.alert('Error', 'Could not update like.');
+    }
+  };
+
+  const handleCommentPost = (postId: string) => {
+    const post = userPosts.find(p => p.id === postId);
+    if (post) {
+      setSelectedPost(post);
+      setShowComments(true);
+    }
+  };
+
+  const handleBackFromComments = () => {
+    setShowComments(false);
+    setSelectedPost(null);
+  };
+
+  const renderPosts = () => {
+    if (postsLoading) {
+      return <ActivityIndicator color={colors.textSecondary} style={styles.postsLoader} />;
+    }
+    if (userPosts.length === 0) {
+      return <Text style={styles.emptyPosts}>no posts yet</Text>;
+    }
+    return userPosts.map(post => (
+      <View key={post.id} style={styles.postSpacing}>
+        <PostCard
+          post={post}
+          likes={post.likes_count}
+          isLiked={post.liked_by_user}
+          onLike={() => handleLikePost(post.id)}
+          onComment={() => handleCommentPost(post.id)}
+          onRate={() => {}}
+          onBookmark={() => {}}
+          onUserPress={(id) => {
+            if (id && id !== userId) {
+              navigation.push('OtherUserProfile', { userId: id });
+            }
+          }}
+        />
+      </View>
+    ));
+  };
+
+  if (showComments && selectedPost) {
+    return (
+      <CommentsScreen
+        post={selectedPost}
+        onBack={handleBackFromComments}
+      />
+    );
+  }
+
 
 
   const handleBack = () => {
@@ -137,6 +242,9 @@ export default function OtherUserProfileScreen({ route, navigation }: OtherUserP
           followingCount={followingCount}
           followersCount={followersCount}
         />
+        <View style={styles.postsSection}>
+          {renderPosts()}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -174,5 +282,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  postsSection: {
+    marginTop: spacing.lg,
+  },
+  postSpacing: {
+    marginBottom: spacing.lg,
+  },
+  emptyPosts: {
+    color: colors.textSecondary,
+  },
+  postsLoader: {
+    marginTop: spacing.sm,
   },
 });

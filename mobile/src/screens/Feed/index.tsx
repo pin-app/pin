@@ -35,6 +35,7 @@ export default function HomeScreen() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [showComments, setShowComments] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [hasNotifications, setHasNotifications] = useState(false);
   const hasFocusedOnce = useRef(false);
 
   const loadPosts = useCallback(async (options?: { useRefreshing?: boolean }) => {
@@ -61,6 +62,23 @@ export default function HomeScreen() {
     loadPosts();
   }, [loadPosts]);
 
+  const checkNotifications = useCallback(async () => {
+    if (!currentUser) {
+      setHasNotifications(false);
+      return;
+    }
+    try {
+      const data = await apiService.getNotifications(1, 0);
+      setHasNotifications(data.length > 0);
+    } catch (error) {
+      console.error('Failed to check notifications:', error);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    checkNotifications();
+  }, [checkNotifications]);
+
   useFocusEffect(
     useCallback(() => {
       if (hasFocusedOnce.current) {
@@ -69,6 +87,12 @@ export default function HomeScreen() {
         hasFocusedOnce.current = true;
       }
     }, [loadPosts])
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      checkNotifications();
+    }, [checkNotifications])
   );
 
   const handleLike = async (postId: string) => {
@@ -289,6 +313,7 @@ export default function HomeScreen() {
         onNotificationPress={handleNotificationPress}
         showSearchClose={isSearchFocused}
         onSearchClose={handleCloseSearch}
+        hasNotifications={hasNotifications}
       />
       <SearchBar 
         placeholder="search a place, member, etc"

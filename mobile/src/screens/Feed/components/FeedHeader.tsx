@@ -8,9 +8,10 @@ interface FeedHeaderProps {
   onNotificationPress: () => void;
   showSearchClose?: boolean;
   onSearchClose?: () => void;
+  hasNotifications?: boolean;
 }
 
-export default function FeedHeader({ onMapPress, onNotificationPress, showSearchClose, onSearchClose }: FeedHeaderProps) {
+export default function FeedHeader({ onMapPress, onNotificationPress, showSearchClose, onSearchClose, hasNotifications }: FeedHeaderProps) {
   return (
     <View style={styles.container}>
       {/* TODO: make this the actual logo */}
@@ -29,7 +30,10 @@ export default function FeedHeader({ onMapPress, onNotificationPress, showSearch
               <FontAwesome6 name="map" size={20} color={colors.iconDefault} />
             </TouchableOpacity>
             <TouchableOpacity onPress={onNotificationPress} style={styles.iconButton}>
-              <FontAwesome6 name="bell" size={20} color={colors.iconDefault} />
+              <View style={styles.notificationIcon}>
+                <FontAwesome6 name="bell" size={20} color={colors.iconDefault} />
+                {hasNotifications ? <View style={styles.notificationDot} /> : null}
+              </View>
             </TouchableOpacity>
           </>
         )}
@@ -67,5 +71,21 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: spacing.xs,
+  },
+  notificationIcon: {
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.ratingNegative,
+    borderWidth: 1,
+    borderColor: colors.background,
   },
 });

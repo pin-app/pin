@@ -6,7 +6,7 @@ import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { ProfileRefreshProvider } from "../contexts/ProfileRefreshContext";
 import TabNavigator from "./TabNavigator";
 import AuthScreen from "../screens/Auth";
-import { OtherUserProfileScreen } from "../screens";
+import { OtherUserProfileScreen, PlacePostsScreen } from "../screens";
 import { EventProvider } from "react-native-outside-press";
 
 type RootStackParamList = {
@@ -14,6 +14,10 @@ type RootStackParamList = {
   OtherUserProfile: {
     userId: string;
     username?: string;
+  };
+  PlacePosts: {
+    placeId: string;
+    placeName: string;
   };
 };
 
@@ -42,6 +46,15 @@ function AppContent() {
             <Stack.Screen 
               name="OtherUserProfile" 
               component={OtherUserProfileScreen}
+              options={{
+                presentation: 'card',
+                gestureEnabled: true,
+                headerShown: false,
+              }}
+            />
+            <Stack.Screen 
+              name="PlacePosts" 
+              component={PlacePostsScreen}
               options={{
                 presentation: 'card',
                 gestureEnabled: true,

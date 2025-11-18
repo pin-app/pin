@@ -230,7 +230,8 @@ export class ApiService {
       limit: limit.toString(),
       offset: offset.toString(),
     });
-    return this.request<User[]>(`/api/users/search?${params.toString()}`);
+    const response = await this.request<{users: User[]}>(`/api/users/search?${params.toString()}`);
+    return response.users;
   }
 
   // Following endpoints
@@ -301,7 +302,8 @@ export class ApiService {
       limit: limit.toString(),
       offset: offset.toString(),
     });
-    return this.request<Place[]>(`/api/places/search?${params.toString()}`);
+    const response = await this.request<{places: Place[]}>(`/api/places/search?${params.toString()}`);
+    return response.places;
   }
 
   async listPlaces(limit = 20, offset = 0): Promise<Place[]> {

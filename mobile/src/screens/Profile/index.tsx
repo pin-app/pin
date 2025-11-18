@@ -69,6 +69,20 @@ export default function ProfileScreen() {
     }
   }, [user]);
 
+  const loadUserPosts = useCallback(async () => {
+    if (!user) return;
+    try {
+      setPostsLoading(true);
+      const postsData = await apiService.getPostsByUser(user.id, 20, 0);
+      setUserPosts(postsData);
+    } catch (error) {
+      console.error('Failed to load user posts:', error);
+      setUserPosts([]);
+    } finally {
+      setPostsLoading(false);
+    }
+  }, [user]);
+
   useEffect(() => {
     if (user) {
       loadUserStats();
@@ -140,19 +154,6 @@ export default function ProfileScreen() {
     console.log('Manually refreshing stats...');
     setRefreshTrigger(prev => prev + 1);
   }, []);
-  const loadUserPosts = useCallback(async () => {
-    if (!user) return;
-    try {
-      setPostsLoading(true);
-      const postsData = await apiService.getPostsByUser(user.id, 20, 0);
-      setUserPosts(postsData);
-    } catch (error) {
-      console.error('Failed to load user posts:', error);
-      setUserPosts([]);
-    } finally {
-      setPostsLoading(false);
-    }
-  }, [user]);
 
   const handleLikePost = async (postId: string) => {
     const post = userPosts.find(p => p.id === postId);

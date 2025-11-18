@@ -196,15 +196,29 @@ export default function HomeScreen() {
     }
   };
 
+  const resetSearch = () => {
+    setIsSearchFocused(false);
+    setSearchValue('');
+    setSearchResults([]);
+  };
+
   const handleSearchResultPress = (result: SearchResult) => {
-    console.log('Search result pressed:', result);
-    // TODO: Navigate to user profile or place details
-    if (result.type === 'member') {
-      // Navigate to user profile
-      console.log('Navigate to user profile:', result.data);
-    } else if (result.type === 'place') {
-      // Navigate to place details or show posts for this place
-      console.log('Navigate to place:', result.data);
+    resetSearch();
+
+    if (result.type === 'member' && result.data) {
+      if (currentUser && result.data.id === currentUser.id) {
+        (navigation as any).navigate('Profile');
+      } else {
+        (navigation as any).navigate('OtherUserProfile', {
+          userId: result.data.id,
+          username: result.data.username,
+        });
+      }
+    } else if (result.type === 'place' && result.data) {
+      (navigation as any).navigate('PlacePosts', {
+        placeId: result.data.id,
+        placeName: result.data.name,
+      });
     }
   };
 
@@ -213,8 +227,7 @@ export default function HomeScreen() {
   };
 
   const handleCloseSearch = () => {
-    setIsSearchFocused(false);
-    setSearchValue(''); // clear the search value when closing
+    resetSearch();
   };
 
   const handleBackFromComments = () => {
@@ -259,6 +272,7 @@ export default function HomeScreen() {
           results={searchResults}
           onResultPress={handleSearchResultPress}
           onClearRecent={handleClearRecent}
+          onClose={resetSearch}
         />
       ) : (
         <Feed
